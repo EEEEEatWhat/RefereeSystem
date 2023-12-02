@@ -1,3 +1,4 @@
+#pragma once 
 // #include <rclcpp/rclcpp.hpp>
 #include <cstdint>
 #include <cstddef>
@@ -15,6 +16,9 @@ namespace RM_referee{
     static_assert(sizeof(PacketHeader) == 5, "PacketHeader must be 5 bytes long with packing");
     
     static constexpr uint8_t StartOfFrame = 0xa5;
+
+
+
 
     // Base packet
     class RefereePacket {
