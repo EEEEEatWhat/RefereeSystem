@@ -14,7 +14,12 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
-add_executable(mytest src/test.cpp src/MappingTables.cpp)
+add_executable(mytest 
+  src/test.cpp 
+  src/MappingTables.cpp 
+  src/DataType.cpp
+  )
+
 ament_target_dependencies(
   mytest
   )

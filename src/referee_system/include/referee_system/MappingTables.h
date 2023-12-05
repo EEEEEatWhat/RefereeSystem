@@ -21,6 +21,7 @@ namespace RM_referee {
         TypeMethodsTables();
         ~TypeMethodsTables();
         void testprocess();
+        int read() ;
 
     /**
      * @brief  向工厂添加ID和绑定的类
@@ -35,10 +36,17 @@ namespace RM_referee {
 
         void SerialReadAsync(boost::asio::serial_port& ,std::vector<uint8_t>& );
     protected:
-        /**
-         * @brief 注意检验cmd_id
-        */
-        void MapSolve(const uint16_t, uint8_t *, uint8_t *);
+    /**
+     * @brief   通过map键值对解包
+                查表效率可能没有switch高，后续看情况选择
+                注意检验cmd_id
+     * @param   cmd_id 键
+     * @param   data 待解包数据
+     * @param   buf 解包后存放位置
+     * @return  已经处理的字节数
+     * @warning 注意内存大小不要越界访问
+    */
+        uint16_t MapSolve(const uint16_t cmd_id, uint8_t * data ,uint16_t data_size);
 
     };
     
