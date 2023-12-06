@@ -30,9 +30,9 @@ namespace RM_referee {
 
         InterRobotCommsMessage = 0x0301,
         CustomRobotData = 0x0302,
-        MinimapInteractionCommsMessage = 0x0303, // TODO: What's this?
+        MinimapInteractionCommsMessage = 0x0303, 
         KeyboardMouseMessage = 0x0304,
-        ClientMinimapRecv = 0x0305, // TODO: What's this?
+        ClientMinimapRecv = 0x0305, 
         CustomClientData = 0x0306,
         MapData = 0x0307,
         CustomInfo = 0x0308

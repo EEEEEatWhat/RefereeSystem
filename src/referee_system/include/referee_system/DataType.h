@@ -81,14 +81,14 @@ namespace RM_referee{
     //0x0102 4
     class ExtSupplyProjectileAction : public RefereePacket { 
     public:
-        struct { 
+        struct S{ 
             uint8_t reserved; 
             uint8_t supply_robot_id;  
             uint8_t supply_projectile_step; 
             uint8_t supply_projectile_num; 
         } m_value;
         static_assert(sizeof(m_value) == 4, "ExtSupplyProjectileAction must be 4 bytes long with packing");
-
+        std::vector<S> queue;//解包函数push，读取数据维护队列长度。
         static uint16_t GetID(){return uint16_t(PacketType::ExtSupplyProjectileAction);};
         uint16_t DateLength(){return sizeof(m_value);};
         virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; 
@@ -99,7 +99,7 @@ namespace RM_referee{
     //0x0202 PowerHeatDataPacket 16
     class PowerHeatDataPacket : public RefereePacket { 
     public:
-        struct { 
+        struct S{ 
             uint16_t chassis_voltage; 
             uint16_t chassis_current; 
             float chassis_power; 
@@ -109,6 +109,7 @@ namespace RM_referee{
             uint16_t shooter_42mm_barrel_heat; 
         } m_value; 
         static_assert(sizeof(m_value) == 16, "PowerHeatDataPacket must be 16 bytes long with packing");
+        std::vector<S> queue;
 
         static uint16_t GetID(){return uint16_t(PacketType::PowerHeatData);};
         uint16_t DateLength(){return sizeof(m_value);};
@@ -130,8 +131,13 @@ namespace RM_referee{
     //0x0302 CustomRobotDataPacket 30
     class CustomRobotDataPacket : public RefereePacket { 
     public:
+        struct { 
+            uint8_t data[30];   
+        } m_value;
+        static_assert(sizeof(m_value) == 30, "CustomRobotDataPacket must be 30 bytes long with packing");
+
         static uint16_t GetID(){return uint16_t(PacketType::CustomRobotData);};
-        // uint16_t DateLength(){return sizeof(m_value);};
+        uint16_t DateLength(){return sizeof(m_value);};
         virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; 
     };
     //0x0303 15

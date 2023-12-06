@@ -20,6 +20,9 @@ namespace RM_referee {
     public:
         TypeMethodsTables();
         ~TypeMethodsTables();
+    /**
+     * @brief 测试
+    */
         void testprocess();
         int read() ;
 

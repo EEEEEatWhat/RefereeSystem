@@ -18,28 +18,28 @@ namespace RM_referee{
                 <<"第1个17mm枪口热量:"<<m_value.shooter_17mm_1_barrel_heat<<"\n"
                 <<"第2个17mm枪口热量:"<<m_value.shooter_17mm_2_barrel_heat<<"\n"
                 <<"42mm枪口热量:"<<m_value.shooter_42mm_barrel_heat<<"\n";
-        return 16;
+        return DateLength();
     };
 
     uint16_t CustomRobotDataPacket::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
         if(cmd_id != GetID())
             std::cout<<"SolveMethod does not match ID !\n";
-        // std::memcpy(&m_value,data,data_size);
-    return 30;
+        std::memcpy(&m_value,data,data_size);
+    return DateLength();
     };
 
     uint16_t ExtSupplyProjectileAction::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
         if(cmd_id != GetID())
             std::cout<<"SolveMethod does not match ID !\n";
-        std::memcpy(&m_value,data,data_size);
+        std::memcpy(&m_value,data,data_size);//BUG：data_size准确性？CRC8 may be useful。
         std::cout<<std::hex<<"0x"<<cmd_id<<"\n"<<std::dec;
         /*  采样数据版本不对!
-        std::cout
-                <<""<<m_value.reserved <<"\n"
-                <<""<<m_value.supply_projectile_num <<"\n"
-                <<""<<m_value.supply_projectile_step <<"\n"
-                <<""<<m_value.supply_robot_id <<"\n";
         */
-    return 4;
+        // std::cout
+        //         <<""<<m_value.reserved <<"\n"
+        //         <<""<<m_value.supply_projectile_num <<"\n"
+        //         <<""<<m_value.supply_projectile_step <<"\n"
+        //         <<""<<m_value.supply_robot_id <<"\n";
+    return DateLength();
     };
 }

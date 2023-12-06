@@ -28,7 +28,9 @@ target_include_directories(mytest
     include
     ${PROJECT_SOURCE_DIR}/include/referee_system/
 )
-
+install(TARGETS 
+  mytest
+  DESTINATION lib/${PROJECT_NAME})
   if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights

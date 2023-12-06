@@ -98,8 +98,10 @@ namespace RM_referee{
 
 
     std::vector<uint8_t> buffer;
+    RM_referee::PacketHeader header;
+    std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
-        std::ifstream file("../samples.txt");
+        std::ifstream file("../samples2.txt");
 
         if (file.is_open()) {
             std::string line;
@@ -126,15 +128,17 @@ namespace RM_referee{
             std::cerr << "Unable to open the file." << std::endl;
         }
 
+        header = RM_referee::PacketHeader();
+        it = buffer.begin();//重复执行
         return 0;
     };
     void TypeMethodsTables::testprocess() {
-        auto header = RM_referee::PacketHeader();
-        auto it = buffer.begin();
             // if(bytes_transferred < sizeof(RM_referee::PacketHeader))
             //     return ;
             std::cout<<"\n"<<buffer.size()<<"\n";
-            if(buffer.size() < sizeof(RM_referee::PacketHeader))
+            if(buffer.size()==89126)
+                std::cout<<"stop here!";
+            if(buffer.size() <= sizeof(RM_referee::PacketHeader))
                 return ;
             while (*it != RM_referee::StartOfFrame) {
                 it++;
@@ -157,7 +161,8 @@ namespace RM_referee{
             //CRC16
             //CRC16();
             uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
-            it += 2+erased+2;
+            if(erased)
+                it += 2+erased+2;
             // buffer.erase(buffer.begin(), it);
             // it = buffer.begin();
     };
