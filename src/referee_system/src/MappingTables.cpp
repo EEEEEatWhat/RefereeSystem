@@ -101,7 +101,8 @@ namespace RM_referee{
     RM_referee::PacketHeader header;
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
-        std::ifstream file("../samples2.txt");
+        system("pwd");
+        std::ifstream file("/home/robo/ws19_referee_system/src/referee_system/samples2.txt");
 
         if (file.is_open()) {
             std::string line;
@@ -115,12 +116,12 @@ namespace RM_referee{
                 }
 
                 // 演示：输出读取的十六进制数据
-                std::cout << "Read Hex Data: ";
-                for (const auto& byte : buffer) {
-                    std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
-                }
-                std::cout << std::endl;
-                std::cout<<std::dec<<buffer.size();
+                // std::cout << "Read Hex Data: ";
+                // for (const auto& byte : buffer) {
+                //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+                // }
+                // std::cout << std::endl;
+                // std::cout<<std::dec<<buffer.size();
             }
 
             file.close();

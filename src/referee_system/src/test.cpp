@@ -40,7 +40,7 @@ int main()
     printf(ascii_art);
     RM_referee::TypeMethodsTables Factory_;
     // Factory_.AddTypeMethod<RM_referee::GameStatusPacket>(RM_referee::GameStatusPacket::GetID());
-    Factory_.AddTypeMethod<RM_referee::ExtSupplyProjectileAction>(RM_referee::ExtSupplyProjectileAction::GetID());
+    Factory_.AddTypeMethod<RM_referee::ExtSupplyProjectile>(RM_referee::ExtSupplyProjectile::GetID());
     Factory_.AddTypeMethod<RM_referee::PowerHeatDataPacket>(RM_referee::PowerHeatDataPacket::GetID());
     Factory_.AddTypeMethod<RM_referee::CustomRobotDataPacket>(RM_referee::CustomRobotDataPacket::GetID());
     Factory_.read();

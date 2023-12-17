@@ -28,7 +28,7 @@ namespace RM_referee{
     return DateLength();
     };
 
-    uint16_t ExtSupplyProjectileAction::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
+    uint16_t ExtSupplyProjectile::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
         if(cmd_id != GetID())
             std::cout<<"SolveMethod does not match ID !\n";
         std::memcpy(&m_value,data,data_size);//BUG：data_size准确性？CRC8 may be useful。
