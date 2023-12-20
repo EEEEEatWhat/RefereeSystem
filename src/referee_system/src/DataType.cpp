@@ -4,7 +4,7 @@
 #include <cstring>
 
 namespace RM_referee{
-
+//TODO 添加提升复用性的宏
     uint16_t PowerHeatDataPacket::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
         if(cmd_id != GetID())
             std::cout<<"SolveMethod does not match ID !\n";

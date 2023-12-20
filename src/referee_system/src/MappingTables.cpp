@@ -18,7 +18,7 @@
 namespace RM_referee{
     TypeMethodsTables::TypeMethodsTables(){}
     TypeMethodsTables::~TypeMethodsTables() {}
-
+    //TODO 解耦Mapsolve 和solvepacket，增加接口适用解析字节流
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
