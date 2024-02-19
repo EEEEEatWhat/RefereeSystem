@@ -19,6 +19,7 @@ namespace RM_referee {
     protected:
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
         CRC8 crc8;
+        CRC16 crc16;
     public:
         TypeMethodsTables();
         ~TypeMethodsTables();

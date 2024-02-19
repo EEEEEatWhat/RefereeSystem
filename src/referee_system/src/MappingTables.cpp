@@ -137,35 +137,27 @@ namespace RM_referee{
             // if(bytes_transferred < sizeof(RM_referee::PacketHeader))
             //     return ;
             std::cout<<"\n"<<buffer.size()<<"\n";
-            if(buffer.size()==89126)
-                std::cout<<"stop here!";
             if(buffer.size() <= sizeof(RM_referee::PacketHeader))
                 return ;
             while (*it != RM_referee::StartOfFrame) {
                 it++;
                 if (it == buffer.end()) {
-                    buffer.erase(buffer.begin(), it);
+                    std::cout<<"No start of frame found!\n";
                     return;
                 }
             }
+            buffer.erase(buffer.begin(), it);
+            it = buffer.begin();
             std::memcpy(&header, &(*it), sizeof(RM_referee::PacketHeader));
             //CRC8
             if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&header),sizeof(RM_referee::PacketHeader))) {
                 it += sizeof(RM_referee::PacketHeader);
-                /*****************************/
-                buffer.erase(buffer.begin(), it);
-                it = buffer.begin();
-                /* 
-                另一种写法不擦除buffer，继续处理
-                ******************************/
                 uint16_t cmd_id = static_cast<uint16_t>( ((*it)<<8) | (*(it+1)) );
                 //CRC16
-                //CRC16();
-                uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
-                if(erased)
-                    it += 2+erased+2;
-                // buffer.erase(buffer.begin(), it);
-                // it = buffer.begin();
+                if(crc16.Verify_CRC16_Check_Sum(&(*buffer.begin()),sizeof(RM_referee::PacketHeader) + 2 + header.DataLength + 2)) {
+                    uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
+                    if(erased) it += 2+erased+2;
+                }
             } else
                 it ++;
 
