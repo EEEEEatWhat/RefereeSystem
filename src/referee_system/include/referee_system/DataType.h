@@ -45,8 +45,8 @@ namespace RM_referee{
     };
     
 
-    #define GENERATEPACK(NAME,TYPE,STRUCT) \
-    class NAME : public RefereePacket { \
+    #define GENERATEPACK(TYPE,STRUCT) \
+    class TYPE##Packet : public RefereePacket { \
     public:\
         STRUCT m_value;\
         std::queue<STRUCT> m_queue;\
@@ -57,54 +57,55 @@ namespace RM_referee{
 
     /**
     @brief  如何使用：
-            How to use GENERATEPACK(NAME,TYPE,STRUCT):
-            Example：0x0102 ExtSupplyProjectile 4 ExtSupplyProjectileAction
+            How to use GENERATEPACK(TYPE,STRUCT):
+            Example：0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction
             定义数据包结构体并断言数据包大小
             
-            struct ExtSupplyProjectileStruct { 
+            struct ExtSupplyProjectileActionStruct { 
                 uint8_t reserved; 
                 uint8_t supply_robot_id;  
                 uint8_t supply_projectile_step; 
                 uint8_t supply_projectile_num; 
             };
-            static_assert(sizeof(S) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-            GENERATEPACK(ExtSupplyProjectile,ExtSupplyProjectileAction,ExtSupplyProjectileStruct)
-    @warning  name,type,struct不要重复；type请查阅enum.h
+            static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
+            GENERATEPACK(ExtSupplyProjectileAction,ExtSupplyProjectileActionStruct)
+    @warning  type,struct不要重复；type请查阅enum.h
     @brief 等效于：
-            //0x0102 ExtSupplyProjectile 4
-            class ExtSupplyProjectile : public RefereePacket { 
+            //0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction
+            class ExtSupplyProjectileActionPacket : public RefereePacket { 
             public:
-                struct ExtSupplyProjectileStruct{ 
+                struct ExtSupplyProjectileActionStruct{ 
                     uint8_t reserved; 
                     uint8_t supply_robot_id;  
                     uint8_t supply_projectile_step; 
                     uint8_t supply_projectile_num; 
                 } m_value;
-                static_assert(sizeof(ExtSupplyProjectileStruct) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-                std::queue<ExtSupplyProjectileStruct> m_queue;
+                static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
+                std::queue<ExtSupplyProjectileActionStruct> m_queue;
                 static uint16_t GetID(){return uint16_t(PacketType::ExtSupplyProjectileAction);};
-                uint16_t DateLength(){return sizeof(ExtSupplyProjectileStruct);};
+                uint16_t DateLength(){return sizeof(ExtSupplyProjectileActionStruct);};
                 virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; 
             };
     */
 
 
     //0x0001 GameStatusPacket 11 GameStatus
-    struct GameStatusPacketStruct { 
+    struct GameStatusStruct { 
         uint8_t game_type : 4; 
         uint8_t game_progress : 4; 
         uint16_t stage_remain_time; 
         uint64_t SyncTimeStamp; }; 
-    // static_assert(sizeof(ExtSupplyProjectileStruct) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-    GENERATEPACK(GameStatusPacket,GameStatus,GameStatusPacketStruct)
-    //0x0002 GameResultPacket 1 GameResultEvent
-    struct GameResultPacketStruct { 
+    // static_assert(sizeof(GameStatusStruct) == 4, "GameStatusStruct must be 4 bytes long with packing");
+    GENERATEPACK(GameStatus,GameStatusStruct)
+
+    //0x0002 GameResultEventPacket 1 GameResultEvent
+    struct GameResultEventStruct { 
         uint8_t winner; }; 
-    // static_assert(sizeof(ExtSupplyProjectileStruct) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-    GENERATEPACK(GameResultPacket,GameResultEvent,GameResultPacketStruct)
+    // static_assert(sizeof(GameResultEventStruct) == 4, "GameResultEventStruct must be 4 bytes long with packing");
+    GENERATEPACK(GameResultEvent,GameResultEventStruct)
 
     //0x0003 GameRobotHPPacket 32 GameRobotHP
-    struct GameRobotHPPacketStruct { 
+    struct GameRobotHPStruct { 
         uint16_t red_1_robot_HP; 
         uint16_t red_2_robot_HP; 
         uint16_t red_3_robot_HP; 
@@ -121,23 +122,32 @@ namespace RM_referee{
         uint16_t blue_7_robot_HP; 
         uint16_t blue_outpost_HP; 
         uint16_t blue_base_HP; };
-    // static_assert(sizeof(ExtSupplyProjectileStruct) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-    GENERATEPACK(GameRobotHPPacket,GameRobotHP,GameRobotHPPacketStruct)
+    // static_assert(sizeof(GameRobotHPStruct) == 4, "GameRobotHPStruct must be 4 bytes long with packing");
+    GENERATEPACK(GameRobotHP,GameRobotHPStruct)
 
-    //0x0101 4
-    //0x0102 ExtSupplyProjectile 4 ExtSupplyProjectileAction
-    struct ExtSupplyProjectileStruct { 
+    //0x0101  PlaygroundEventPacket 4 PlaygroundEvent
+    struct PlaygroundEventStruct { 
+        uint32_t event_data; };
+    // static_assert(sizeof(PlaygroundEventStruct) == 4, "PlaygroundEventStruct must be 4 bytes long with packing");
+    GENERATEPACK(PlaygroundEvent,PlaygroundEventStruct)
+
+    //0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction
+    struct ExtSupplyProjectileActionStruct { 
         uint8_t reserved; 
         uint8_t supply_robot_id;  
         uint8_t supply_projectile_step; 
         uint8_t supply_projectile_num; };
-    static_assert(sizeof(ExtSupplyProjectileStruct) == 4, "ExtSupplyProjectileStruct must be 4 bytes long with packing");
-    GENERATEPACK(ExtSupplyProjectile,ExtSupplyProjectileAction,ExtSupplyProjectileStruct)
+    static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
+    GENERATEPACK(ExtSupplyProjectileAction,ExtSupplyProjectileActionStruct)
+
     //0x0104 2
+
     //0x0105 1
+    
     //0x0201 27
+
     //0x0202 PowerHeatDataPacket 16 PowerHeatData
-    struct PowerHeatDataPacketStruct { 
+    struct PowerHeatDataStruct { 
         uint16_t chassis_voltage; 
         uint16_t chassis_current; 
         float chassis_power; 
@@ -145,8 +155,8 @@ namespace RM_referee{
         uint16_t shooter_17mm_1_barrel_heat; 
         uint16_t shooter_17mm_2_barrel_heat; 
         uint16_t shooter_42mm_barrel_heat; }; 
-    static_assert(sizeof(PowerHeatDataPacketStruct) == 16, "PowerHeatDataPacketStruct must be 16 bytes long with packing");
-    GENERATEPACK(PowerHeatDataPacket,PowerHeatData,PowerHeatDataPacketStruct)
+    static_assert(sizeof(PowerHeatDataStruct) == 16, "PowerHeatDataStruct must be 16 bytes long with packing");
+    GENERATEPACK(PowerHeatData,PowerHeatDataStruct)
 
     //0x0203 16
     //0x0204 1
@@ -159,13 +169,13 @@ namespace RM_referee{
     //0x020B 40
     //0x020C 6
     //0x020D 4
-    //0x020E 1
+    
     //0x0301 128
     //0x0302 CustomRobotDataPacket 30 CustomRobotData
-    struct CustomRobotDataPacketStruct { 
+    struct CustomRobotDataStruct { 
         uint8_t data[30]; };
-    static_assert(sizeof(CustomRobotDataPacketStruct) == 30, "CustomRobotDataPacketStruct must be 30 bytes long with packing");
-    GENERATEPACK(CustomRobotDataPacket,CustomRobotData,CustomRobotDataPacketStruct)
+    static_assert(sizeof(CustomRobotDataStruct) == 30, "CustomRobotDataStruct must be 30 bytes long with packing");
+    GENERATEPACK(CustomRobotData,CustomRobotDataStruct)
     //0x0303 15
     //0x0304 12 
     //0x0305 10

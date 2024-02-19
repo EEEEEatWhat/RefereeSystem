@@ -8,7 +8,7 @@ namespace RM_referee {
         GameResultEvent = 0x0002,
         GameRobotHP = 0x0003,
 
-        PlaygroundEventData = 0x0101,
+        PlaygroundEvent = 0x0101,
         ExtSupplyProjectileAction = 0x0102,
         RefereeWarningEvent = 0x0104,
         DartInfo = 0x0105,
