@@ -20,7 +20,6 @@ char ascii_art[] = R"(
 using std::hex;
 int main()
 {
-    //TODO 添加CRC校验
     //TODO:宏提高复用性
     //TODO:类内成员保护
     //TODO:导出子类插件给行为树做解包

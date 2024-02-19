@@ -33,8 +33,11 @@ namespace RM_referee{
          * @return 处理的字节数
         */
         virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) {
-        std::cout<<"[Warning : This should not appear !]\n";
-        return 0 ;
+            (void)cmd_id;
+            (void)data;
+            (void)data_size;
+            std::cout<<"[Warning : This should not appear !]\n";
+            return 0 ;
         };
         //TODO 添加获取数据结构体的接口，再将其序列化发送
         //TODO 或者添加数据结构体序列化后的接口

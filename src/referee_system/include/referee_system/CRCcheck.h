@@ -1,3 +1,4 @@
+#pragma once 
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
@@ -26,7 +27,7 @@ namespace RM_referee {
                 0xe9, 0xb7, 0x55, 0x0b, 0x88, 0xd6, 0x34, 0x6a, 0x2b, 0x75, 0x97, 0xc9, 0x4a, 0x14, 0xf6, 0xa8,   
                 0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7, 0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35,   
             };
-            uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8) {   
+            inline uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8) {   
                 uint8_t ucIndex;   
                 while (dwLength--) {   
                     ucIndex = ucCRC8^(*pchMessage++);   
@@ -43,7 +44,7 @@ namespace RM_referee {
          * @param dwLength: Stream length = Data + checksum   
          * @return True or False (CRC Verify Result)   
         */   
-        bool Verify_CRC8_Check_Sum(uint8_t *pchMessage, unsigned int dwLength) {   
+        inline bool Verify_CRC8_Check_Sum(uint8_t *pchMessage, unsigned int dwLength) {   
             uint8_t ucExpected = 0; 
             if ((pchMessage == 0) || (dwLength <= 2)) 
                 return 0;   
@@ -95,7 +96,7 @@ namespace RM_referee {
              * Input: Data to check,Stream length, initialized checksum   
              * Output: CRC checksum   
             */   
-            uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC) {   
+            inline uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC) {   
                 uint8_t chData;   
                 if (pchMessage == NULL) {   
                     return 0xFFFF;   
@@ -115,7 +116,7 @@ namespace RM_referee {
              * @param dwLength: Stream length = Data + checksum   
              * @return True or False (CRC Verify Result)   
             */     
-            bool Verify_CRC16_Check_Sum(uint8_t *pchMessage, uint32_t dwLength) {   
+            inline bool Verify_CRC16_Check_Sum(uint8_t *pchMessage, uint32_t dwLength) {   
                 uint16_t wExpected = 0;   
                 if ((pchMessage == NULL) || (dwLength <= 2)) {   
                     return false;   
