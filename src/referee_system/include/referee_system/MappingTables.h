@@ -7,6 +7,7 @@
 #define MAPPING_TABLES_H
 #pragma once 
 #include "DataType.h"
+#include "CRCcheck.h"
 #include <memory>
 #include <unordered_map>
 #include <map>
@@ -17,6 +18,7 @@ namespace RM_referee {
     class TypeMethodsTables {
     protected:
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
+        CRC8 crc8;
     public:
         TypeMethodsTables();
         ~TypeMethodsTables();

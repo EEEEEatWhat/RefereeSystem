@@ -53,7 +53,8 @@ namespace RM_referee{
     };
 
     /**
-    @brief  How to use GENERATEPACK(NAME,TYPE,STRUCT):
+    @brief  如何使用：
+            How to use GENERATEPACK(NAME,TYPE,STRUCT):
             Example：0x0102 ExtSupplyProjectile 4 ExtSupplyProjectileAction
             定义数据包结构体并断言数据包大小
             

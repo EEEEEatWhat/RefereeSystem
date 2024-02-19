@@ -150,22 +150,25 @@ namespace RM_referee{
             }
             std::memcpy(&header, &(*it), sizeof(RM_referee::PacketHeader));
             //CRC8
-            // header.CRC8;
-            it += sizeof(RM_referee::PacketHeader);
-            /*****************************/
-            buffer.erase(buffer.begin(), it);
-            it = buffer.begin();
-            /* 
-            另一种写法不擦除buffer，继续处理
-            ******************************/
-            uint16_t cmd_id = static_cast<uint16_t>( ((*it)<<8) | (*(it+1)) );
-            //CRC16
-            //CRC16();
-            uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
-            if(erased)
-                it += 2+erased+2;
-            // buffer.erase(buffer.begin(), it);
-            // it = buffer.begin();
+            if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&header),sizeof(RM_referee::PacketHeader))) {
+                it += sizeof(RM_referee::PacketHeader);
+                /*****************************/
+                buffer.erase(buffer.begin(), it);
+                it = buffer.begin();
+                /* 
+                另一种写法不擦除buffer，继续处理
+                ******************************/
+                uint16_t cmd_id = static_cast<uint16_t>( ((*it)<<8) | (*(it+1)) );
+                //CRC16
+                //CRC16();
+                uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
+                if(erased)
+                    it += 2+erased+2;
+                // buffer.erase(buffer.begin(), it);
+                // it = buffer.begin();
+            } else
+                it ++;
+
     };
 
 }

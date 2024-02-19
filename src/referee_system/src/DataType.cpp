@@ -5,6 +5,12 @@
 
 namespace RM_referee{
 //TODO 添加提升复用性的宏
+    /**
+     * 对于每一个数据包，都需要实现SolvePacket方法
+     * 但是对于不同的数据包，SolvePacket方法的实现是不同的
+     * 有的数据包内存布局和接受的数据包一样，有的数据包内存布局和接受的数据包不一样 !
+     * 布局相同的数据包，使用模板来实现SolvePacket方法
+    */
     uint16_t PowerHeatDataPacket::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {
         if(cmd_id != GetID())
             std::cout<<"SolveMethod does not match ID !\n";
