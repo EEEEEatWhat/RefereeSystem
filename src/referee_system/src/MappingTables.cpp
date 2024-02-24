@@ -18,7 +18,6 @@
 namespace RM_referee{
     TypeMethodsTables::TypeMethodsTables(){}
     TypeMethodsTables::~TypeMethodsTables() {}
-    //TODO 解耦Mapsolve 和solvepacket，增加接口适用解析字节流
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
@@ -29,7 +28,14 @@ namespace RM_referee{
             return 0;
         }
     }
-
+    void TypeMethodsTables::Mapserialize(uint8_t * data ,const uint16_t cmd_id ,uint16_t data_size) {
+        auto it = m_map.find(cmd_id);
+        if(it!=m_map.end()) {
+            RM_referee::GameStatusPacket* packet1 = dynamic_cast<RM_referee::GameStatusPacket*>(it->second.get());
+        } else {
+            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+        }
+    };
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
         boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),
             [&, header = RM_referee::PacketHeader()](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {

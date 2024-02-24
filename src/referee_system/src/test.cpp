@@ -44,6 +44,7 @@ int main()
     Factory_.read();
     while(1) {
         Factory_.testprocess();
+        // Factory_.MapSolve(0x0102, nullptr, 0);
         // sleep(1);
     };
     return 0;

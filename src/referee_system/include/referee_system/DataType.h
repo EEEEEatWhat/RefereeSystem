@@ -26,22 +26,23 @@ namespace RM_referee{
 
     // Base packet
     class RefereePacket {
-    public:
-        RefereePacket(){};
-        ~RefereePacket(){};
-        /**
-         * @return 处理的字节数
-        */
-        virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) {
-            (void)cmd_id;
-            (void)data;
-            (void)data_size;
-            std::cout<<"[Warning : This should not appear !]\n";
-            return 0 ;
-        };
-        //TODO 添加获取数据结构体的接口，再将其序列化发送
-        //TODO 或者添加数据结构体序列化后的接口
-        virtual void GetDateStruct() {};
+        public:
+            RefereePacket(){};
+            ~RefereePacket(){};
+            /**
+             * @return 处理的字节数
+            */
+            virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) {
+                (void)cmd_id;
+                (void)data;
+                (void)data_size;
+                std::cout<<"[Warning : This should not appear !]\n";
+                return 0 ;
+            };
+            /**
+             * @brief 获得子类队列的修改权限 --通过类型擦除
+            */
+            // virtual QueueBase* GetQueue() = 0;
     };
     
 
@@ -51,7 +52,7 @@ namespace RM_referee{
         STRUCT m_value;\
         std::queue<STRUCT> m_queue;\
         static uint16_t GetID(){return uint16_t(PacketType::TYPE);};\
-        uint16_t DateLength(){return sizeof(STRUCT);};\
+        static uint16_t DateLength(){return sizeof(STRUCT);};\
         virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; \
     };
 

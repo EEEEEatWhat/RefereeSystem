@@ -44,15 +44,23 @@ namespace RM_referee {
     protected:
     /**
      * @brief   通过map键值对解包
-                查表效率可能没有switch高，后续看情况选择
                 注意检验cmd_id
      * @param   cmd_id 键
      * @param   data 待解包数据
-     * @param   buf 解包后存放位置
+     * @param   data_size 数据包大小
      * @return  已经处理的字节数
-     * @warning 注意内存大小不要越界访问
     */
         uint16_t MapSolve(const uint16_t cmd_id, uint8_t * data ,uint16_t data_size);
+    /**
+     * @brief   通过map键值对查找
+     *          数据序列化接口，序列化数据后通过server/client发送
+     * @param   
+     * @param   
+     * @param   
+     * @return  None
+     * @warning 
+    */
+        void Mapserialize(uint8_t * data ,const uint16_t cmd_id ,uint16_t data_size);
 
     };
     
