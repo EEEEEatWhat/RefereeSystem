@@ -60,6 +60,9 @@ class RefereeSystem : public rclcpp::Node {
             response->data_length = serialize_memcount;
             response->data_stream.resize(serialize_memcount);
             serialize_memcount = Factory_.Mapserialize(response->data_stream, request->cmd_id);
+            auto data = Factory_.MapGetData(request->cmd_id);
+            
+            
         }
 };
 

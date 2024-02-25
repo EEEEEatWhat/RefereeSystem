@@ -39,53 +39,43 @@ namespace RM_referee{
     }
 
     uint16_t TypeMethodsTables::Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type> &Pdata ,const uint16_t cmd_id ) {
-        auto it = m_map.find(cmd_id);
-        if(it!=m_map.end()) {
-            it->second->GetID();
-            it->second->GetDataLength();
-
-            RM_referee::PowerHeatDataPacket* TempPowerHeatDataPacket = dynamic_cast<RM_referee::PowerHeatDataPacket*>(it->second.get());
-            if(TempPowerHeatDataPacket !=nullptr) { //匹配成功
-                std::lock_guard<std::mutex> lock(TempPowerHeatDataPacket->m_mutex);
-                    RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = TempPowerHeatDataPacket->m_queue.front();
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempPowerHeatDataPacket->GetDataLength();
-                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
-                    TempPowerHeatDataPacket->m_queue.pop();
-                TempPowerHeatDataPacket->m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempPowerHeatDataPacket->GetDataLength());
-                return TempPowerHeatDataPacket->GetDataLength();
-            }
-
-            RM_referee::CustomRobotDataPacket* TempCustomRobotDataPacket = dynamic_cast<RM_referee::CustomRobotDataPacket*>(it->second.get());
-            if(TempCustomRobotDataPacket !=nullptr) { //匹配成功
-                std::lock_guard<std::mutex> lock(TempCustomRobotDataPacket->m_mutex);
-                    RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = TempCustomRobotDataPacket->m_queue.front();
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontCustomRobotDataElement);
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempCustomRobotDataPacket->GetDataLength();
-                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
-                    TempCustomRobotDataPacket->m_queue.pop();
-                TempCustomRobotDataPacket->m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempCustomRobotDataPacket->GetDataLength());
-                return TempCustomRobotDataPacket->GetDataLength();
-            }
-
-            RM_referee::ExtSupplyProjectileActionPacket* TempExtSupplyProjectileActionPacket = dynamic_cast<RM_referee::ExtSupplyProjectileActionPacket*>(it->second.get());
-            if(TempExtSupplyProjectileActionPacket !=nullptr) { //匹配成功
-                std::lock_guard<std::mutex> lock(TempExtSupplyProjectileActionPacket->m_mutex);
-                    RM_referee::ExtSupplyProjectileActionStruct& frontExtSupplyProjectileActionElement = TempExtSupplyProjectileActionPacket->m_queue.front();
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontExtSupplyProjectileActionElement);
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempExtSupplyProjectileActionPacket->GetDataLength();
-                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
-                    TempExtSupplyProjectileActionPacket->m_queue.pop();
-                TempExtSupplyProjectileActionPacket->m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempExtSupplyProjectileActionPacket->GetDataLength());
-                return TempExtSupplyProjectileActionPacket->GetDataLength();
-            }
-            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-        } else {
-            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+        if(powerheatdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
+            RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = powerheatdatapacket.m_queue.front();
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
+            Pdata.insert(Pdata.end(), dataStart, dataEnd);
+            powerheatdatapacket.m_queue.pop();
+            powerheatdatapacket.m_mutex.unlock();
+            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,powerheatdatapacket.GetDataLength());
+            return powerheatdatapacket.GetDataLength();
         }
+
+        if(customrobotdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);        
+            RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = customrobotdatapacket.m_queue.front();
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontCustomRobotDataElement);
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + customrobotdatapacket.GetDataLength();
+            Pdata.insert(Pdata.end(), dataStart, dataEnd);
+            customrobotdatapacket.m_queue.pop();
+            customrobotdatapacket.m_mutex.unlock();
+            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,customrobotdatapacket.GetDataLength());
+            return customrobotdatapacket.GetDataLength();
+        }
+
+        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
+            RM_referee::ExtSupplyProjectileActionStruct& frontExtSupplyProjectileActionElement = extsupplyprojectileactionpacket.m_queue.front();
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontExtSupplyProjectileActionElement);
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + extsupplyprojectileactionpacket.GetDataLength();
+            Pdata.insert(Pdata.end(), dataStart, dataEnd);
+            extsupplyprojectileactionpacket.m_queue.pop();
+            extsupplyprojectileactionpacket.m_mutex.unlock();
+            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,extsupplyprojectileactionpacket.GetDataLength());
+            return extsupplyprojectileactionpacket.GetDataLength();
+        }
+
+        printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         return 0;
     }
 
@@ -99,23 +89,24 @@ namespace RM_referee{
         }
     }
 
-    template <typename Type>
-    Type TypeMethodsTables::MapGetData(const uint16_t cmd_id ) {
-        auto it = m_map.find(cmd_id);
-        if(it!=m_map.end()) {
-
-            RM_referee::PowerHeatDataPacket* TempPowerHeatDataPacket = dynamic_cast<RM_referee::PowerHeatDataPacket*>(it->second.get());
-            if(TempPowerHeatDataPacket !=nullptr) { //匹配成功
-                std::lock_guard<std::mutex> lock(TempPowerHeatDataPacket->m_mutex);
-                return TempPowerHeatDataPacket->m_queue.front();
-            }
-
-            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-            return nullptr;
-        } else {
-            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-            return nullptr;
+    std::shared_ptr<RefereePacket> TypeMethodsTables::MapGetData(const uint16_t cmd_id ) {
+        if(powerheatdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
+            return std::shared_ptr<RM_referee::PowerHeatDataPacket>(&powerheatdatapacket, [](RM_referee::PowerHeatDataPacket*){});
         }
+
+        if(customrobotdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);
+            return std::shared_ptr<RM_referee::CustomRobotDataPacket>(&customrobotdatapacket, [](RM_referee::CustomRobotDataPacket*){});
+        }
+
+        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
+            return std::shared_ptr<RM_referee::ExtSupplyProjectileActionPacket>(&extsupplyprojectileactionpacket, [](RM_referee::ExtSupplyProjectileActionPacket*){});
+        }
+
+        printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+        return nullptr;
     }
 
 
@@ -233,10 +224,9 @@ namespace RM_referee{
             while (*it != RM_referee::StartOfFrame) {
                 it++;
                 if (it == buffer.end()) {
-                    std::cout<<"No start of frame found! buffer.size:"<<buffer.size()<<"\n";
+                    // std::cout<<"No start of frame found! buffer.size:"<<buffer.size()<<"\n";
                     read();
                     // exit(0);
-                    // read();
                     return;
                 }
             }

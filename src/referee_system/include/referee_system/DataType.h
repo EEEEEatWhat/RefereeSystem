@@ -56,6 +56,7 @@ namespace RM_referee{
         std::queue<STRUCT> m_queue;\
         std::mutex m_mutex;\
         TYPE##Packet(){};\
+        TYPE##Packet(const TYPE##Packet& other):m_queue(other.m_queue){};\
         ~TYPE##Packet(){};\
         static uint16_t StaticGetID(){return uint16_t(PacketType::TYPE);};\
         uint16_t GetID(){return StaticGetID();};\

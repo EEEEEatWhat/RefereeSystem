@@ -80,8 +80,7 @@ namespace RM_referee {
          * @param   cmd_id 键，请求的数据包
          * @return  数据包
         */
-       template <typename Type>
-        Type MapGetData(const uint16_t cmd_id );
+        std::shared_ptr<RefereePacket> MapGetData(const uint16_t cmd_id );
     };
     
 
