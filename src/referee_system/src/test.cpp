@@ -33,33 +33,46 @@ class RefereeSystem : public rclcpp::Node {
             std::thread threadOne([&](){
                 while(1) {
                     Factory_.testprocess();
-                    sleep(1);
+                    // sleep(1);
                 };
 
             });
             threadOne.detach();
+            RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
         }
 
     private:
         rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
         RM_referee::TypeMethodsTables Factory_;
-
+        uint16_t serialize_memcount = 0;
         void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
-            Factory_.Mapserialize(reinterpret_cast<uint8_t*>(&response->data_stream), request->cmd_id);
+            serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
+            RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
+            if(serialize_memcount == 0) { //cmd_id不存在
+                RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
+                response->cmd_id = 0x0000;
+                response->data_length = 1;
+                response->data_stream.resize(1);
+                response->data_stream.push_back(0x00);
+                return;
+            }
             response->cmd_id = request->cmd_id;
-            response->data_length = sizeof(response->data_stream);
+            response->data_length = serialize_memcount;
+            response->data_stream.resize(serialize_memcount);
+            serialize_memcount = Factory_.Mapserialize(response->data_stream, request->cmd_id);
         }
 };
 
     //TODO:导出子类插件给行为树做解包
     //TODO:尝试使用模板函数重写
-    //服务端消息类型
-    //请求  uint16 cmd_id
-    //---
-    //返回  uint16 cmd_id
-    //     uint16 data_length
-    //     uint8[] data_stream 
     /*
+    服务端消息类型
+    请求  uint16 cmd_id
+    ---
+    返回  uint16 cmd_id
+         uint16 data_length
+         uint8[] data_stream 
+    当返回值为0x0000时，表示cmd_id不存在
     boost::asio::io_service ioService;
     boost::asio::serial_port serialPort(ioService, "/dev/ttyUSB0");
     std::vector<uint8_t> buffer(4096);  // 适当调整缓冲区大小

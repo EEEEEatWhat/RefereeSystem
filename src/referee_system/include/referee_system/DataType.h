@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <iostream>
 #include <queue>
+#include <mutex>
 #include "enums.h"
 namespace RM_referee{
     // Packet header structure
@@ -29,8 +30,8 @@ namespace RM_referee{
         public:
             RefereePacket(){};
             virtual ~RefereePacket(){};
-            virtual uint16_t GetID(){};
-            virtual uint16_t GetDataLength(){};
+            virtual uint16_t GetID() = 0;
+            virtual uint16_t GetDataLength() = 0;
             /**
              * @return 处理的字节数
             */
@@ -47,12 +48,13 @@ namespace RM_referee{
             // virtual QueueBase* GetQueue() = 0;
     };
     
-
     #define GENERATEPACK(TYPE,STRUCT) \
     class TYPE##Packet : public RefereePacket { \
+    protected:\
     public:\
         STRUCT m_value;\
         std::queue<STRUCT> m_queue;\
+        std::mutex m_mutex;\
         TYPE##Packet(){};\
         ~TYPE##Packet(){};\
         static uint16_t StaticGetID(){return uint16_t(PacketType::TYPE);};\

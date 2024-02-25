@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <functional>
+#include <mutex>
 #include <boost/asio.hpp>
 #include "MappingTables.h"
 //below is for test 
@@ -37,7 +38,7 @@ namespace RM_referee{
         }
     }
 
-    void TypeMethodsTables::Mapserialize(uint8_t * data ,const uint16_t cmd_id ) {
+    uint16_t TypeMethodsTables::Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type> &Pdata ,const uint16_t cmd_id ) {
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             it->second->GetID();
@@ -45,29 +46,78 @@ namespace RM_referee{
 
             RM_referee::PowerHeatDataPacket* TempPowerHeatDataPacket = dynamic_cast<RM_referee::PowerHeatDataPacket*>(it->second.get());
             if(TempPowerHeatDataPacket !=nullptr) { //匹配成功
-                std::memcpy(data,&TempPowerHeatDataPacket->m_queue.front(),TempPowerHeatDataPacket->GetDataLength());
-                TempPowerHeatDataPacket->m_queue.pop();
-                return;
+                std::lock_guard<std::mutex> lock(TempPowerHeatDataPacket->m_mutex);
+                    RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = TempPowerHeatDataPacket->m_queue.front();
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempPowerHeatDataPacket->GetDataLength();
+                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
+                    TempPowerHeatDataPacket->m_queue.pop();
+                TempPowerHeatDataPacket->m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempPowerHeatDataPacket->GetDataLength());
+                return TempPowerHeatDataPacket->GetDataLength();
             }
 
             RM_referee::CustomRobotDataPacket* TempCustomRobotDataPacket = dynamic_cast<RM_referee::CustomRobotDataPacket*>(it->second.get());
             if(TempCustomRobotDataPacket !=nullptr) { //匹配成功
-                std::memcpy(data,&TempCustomRobotDataPacket->m_queue.front(),TempCustomRobotDataPacket->GetDataLength());
-                TempCustomRobotDataPacket->m_queue.pop();
-                return;
+                std::lock_guard<std::mutex> lock(TempCustomRobotDataPacket->m_mutex);
+                    RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = TempCustomRobotDataPacket->m_queue.front();
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontCustomRobotDataElement);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempCustomRobotDataPacket->GetDataLength();
+                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
+                    TempCustomRobotDataPacket->m_queue.pop();
+                TempCustomRobotDataPacket->m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempCustomRobotDataPacket->GetDataLength());
+                return TempCustomRobotDataPacket->GetDataLength();
             }
 
             RM_referee::ExtSupplyProjectileActionPacket* TempExtSupplyProjectileActionPacket = dynamic_cast<RM_referee::ExtSupplyProjectileActionPacket*>(it->second.get());
             if(TempExtSupplyProjectileActionPacket !=nullptr) { //匹配成功
-                std::memcpy(data,&TempExtSupplyProjectileActionPacket->m_queue.front(),TempExtSupplyProjectileActionPacket->GetDataLength());
-                TempExtSupplyProjectileActionPacket->m_queue.pop();
-                return;
+                std::lock_guard<std::mutex> lock(TempExtSupplyProjectileActionPacket->m_mutex);
+                    RM_referee::ExtSupplyProjectileActionStruct& frontExtSupplyProjectileActionElement = TempExtSupplyProjectileActionPacket->m_queue.front();
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontExtSupplyProjectileActionElement);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + TempExtSupplyProjectileActionPacket->GetDataLength();
+                    Pdata.insert(Pdata.end(), dataStart, dataEnd);
+                    TempExtSupplyProjectileActionPacket->m_queue.pop();
+                TempExtSupplyProjectileActionPacket->m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,TempExtSupplyProjectileActionPacket->GetDataLength());
+                return TempExtSupplyProjectileActionPacket->GetDataLength();
             }
             printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         } else {
             printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         }
+        return 0;
     }
+
+    uint16_t TypeMethodsTables::MapSearchDataLength(const uint16_t cmd_id ) {
+        auto it = m_map.find(cmd_id);
+        if(it!=m_map.end()) {
+            return it->second->GetDataLength();
+        } else {
+            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+            return 0;
+        }
+    }
+
+    template <typename Type>
+    Type TypeMethodsTables::MapGetData(const uint16_t cmd_id ) {
+        auto it = m_map.find(cmd_id);
+        if(it!=m_map.end()) {
+
+            RM_referee::PowerHeatDataPacket* TempPowerHeatDataPacket = dynamic_cast<RM_referee::PowerHeatDataPacket*>(it->second.get());
+            if(TempPowerHeatDataPacket !=nullptr) { //匹配成功
+                std::lock_guard<std::mutex> lock(TempPowerHeatDataPacket->m_mutex);
+                return TempPowerHeatDataPacket->m_queue.front();
+            }
+
+            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+            return nullptr;
+        } else {
+            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+            return nullptr;
+        }
+    }
+
 
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
         boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),

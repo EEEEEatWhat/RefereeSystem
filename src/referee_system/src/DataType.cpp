@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-
+#include <mutex>
 namespace RM_referee{
     /**
      * 对于每一个数据包，都需要实现SolvePacket方法
@@ -16,9 +16,11 @@ namespace RM_referee{
         if(cmd_id != GetID()) \
             std::cout<<"SolveMethod does not match ID !\n"; \
         std::memcpy(&m_value,data,data_size); \
+        std::lock_guard<std::mutex> lock(m_mutex); \
         m_queue.push(m_value); \
         if(m_queue.size() > 30) \
             m_queue.pop(); \
+        m_mutex.unlock(); \
         std::cout<<std::hex<<"0x"<<cmd_id<<"\n"<<std::dec; \
         return GetDataLength(); \
     };

@@ -30,45 +30,58 @@ namespace RM_referee {
         */
         TypeMethodsTables();
         ~TypeMethodsTables();
-    /**
-     * @brief 测试
-    */
-        void testprocess();
-        int read() ;
+        /**
+         * @brief 测试
+        */
+            void testprocess();
+            int read() ;
 
-    /**
-     * @brief  向工厂添加ID和绑定的类
-     * @param  Type 类型名
-     * @param  cmd_id 
-     * @return NONE
-    */
-    template <typename Type>
-    void AddTypeMethod(uint16_t cmd_id) {
-        m_map.emplace(cmd_id, std::make_shared<Type>());
-    }
+        /**
+         * @brief  向工厂添加ID和绑定的类
+         * @param  Type 类型名
+         * @param  cmd_id 
+         * @return NONE
+        */
+        template <typename Type>
+        void AddTypeMethod(uint16_t cmd_id) {
+            m_map.emplace(cmd_id, std::make_shared<Type>());
+        }
 
         void SerialReadAsync(boost::asio::serial_port& ,std::vector<uint8_t>& );
         
-    /**
-     * @brief   通过map键值对解包
-                注意检验cmd_id
-     * @param   cmd_id 键
-     * @param   data 待解包数据
-     * @param   data_size 数据包大小
-     * @return  已经处理的字节数
-    */
+        /**
+         * @brief  通过map键值对解包并存储到类内的队列中
+        * @param   cmd_id 键
+        * @param   data 待解包数据
+        * @param   data_size 数据包大小
+        * @return  已经处理的字节数
+        */
         uint16_t MapSolve(const uint16_t cmd_id, uint8_t * data ,uint16_t data_size);
-    /**
-     * @brief   通过map键值对查找
-     *          数据序列化接口，序列化数据后通过server/client发送
-     * @param   
-     * @param   
-     * @param   
-     * @return  None
-     * @warning 
-    */
-        void Mapserialize(uint8_t * data ,const uint16_t cmd_id );
 
+        /**
+         * @brief   通过map键值对查找
+         *          数据序列化接口，序列化数据后通过server/client发送
+         * @param   Pdata 序列化后的目标的地址
+         * @param   cmd_id 键，请求序列化的数据包
+         * @return  已处理的字节数
+         * @warning 
+        */
+        uint16_t Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type>  &Pdata ,const uint16_t cmd_id );
+
+        /**
+         * @brief   通过map键值对查找获取数据包长度
+         * @param   cmd_id 键，请求序列化的数据包
+         * @return  数据包长度
+        */
+        uint16_t MapSearchDataLength(const uint16_t cmd_id );
+
+        /**
+         * @brief   通过map键值对查找获取数据包
+         * @param   cmd_id 键，请求的数据包
+         * @return  数据包
+        */
+       template <typename Type>
+        Type MapGetData(const uint16_t cmd_id );
     };
     
 
