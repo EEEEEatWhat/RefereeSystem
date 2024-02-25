@@ -20,7 +20,7 @@ namespace RM_referee{
         if(m_queue.size() > 30) \
             m_queue.pop(); \
         std::cout<<std::hex<<"0x"<<cmd_id<<"\n"<<std::dec; \
-        return DateLength(); \
+        return GetDataLength(); \
     };
 
     PACKETCOPY(PowerHeatDataPacket)

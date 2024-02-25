@@ -28,7 +28,9 @@ namespace RM_referee{
     class RefereePacket {
         public:
             RefereePacket(){};
-            ~RefereePacket(){};
+            virtual ~RefereePacket(){};
+            virtual uint16_t GetID(){};
+            virtual uint16_t GetDataLength(){};
             /**
              * @return 处理的字节数
             */
@@ -51,8 +53,12 @@ namespace RM_referee{
     public:\
         STRUCT m_value;\
         std::queue<STRUCT> m_queue;\
-        static uint16_t GetID(){return uint16_t(PacketType::TYPE);};\
-        static uint16_t DateLength(){return sizeof(STRUCT);};\
+        TYPE##Packet(){};\
+        ~TYPE##Packet(){};\
+        static uint16_t StaticGetID(){return uint16_t(PacketType::TYPE);};\
+        uint16_t GetID(){return StaticGetID();};\
+        static uint16_t StaticGetDataLength(){return sizeof(STRUCT);};\
+        uint16_t GetDataLength() {return StaticGetDataLength();};\
         virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; \
     };
 
@@ -74,18 +80,7 @@ namespace RM_referee{
     @brief 等效于：
             //0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction
             class ExtSupplyProjectileActionPacket : public RefereePacket { 
-            public:
-                struct ExtSupplyProjectileActionStruct{ 
-                    uint8_t reserved; 
-                    uint8_t supply_robot_id;  
-                    uint8_t supply_projectile_step; 
-                    uint8_t supply_projectile_num; 
-                } m_value;
-                static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
-                std::queue<ExtSupplyProjectileActionStruct> m_queue;
-                static uint16_t GetID(){return uint16_t(PacketType::ExtSupplyProjectileAction);};
-                uint16_t DateLength(){return sizeof(ExtSupplyProjectileActionStruct);};
-                virtual uint16_t SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size) override ; 
+            TODO fix it
             };
     */
 
@@ -97,7 +92,7 @@ namespace RM_referee{
         uint16_t stage_remain_time; 
         uint64_t SyncTimeStamp; }; 
     // static_assert(sizeof(GameStatusStruct) == 4, "GameStatusStruct must be 4 bytes long with packing");
-    GENERATEPACK(GameStatus,GameStatusStruct)
+    // GENERATEPACK(GameStatus,GameStatusStruct)
 
     //0x0002 GameResultEventPacket 1 GameResultEvent
     struct GameResultEventStruct { 

@@ -7,8 +7,16 @@
 #include <iostream>
 #include <vector>
 #include <boost/asio.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <std_msgs/msg/string.hpp>
+
+#include <thread>   
+
 #include "DataType.h"
 #include "MappingTables.h"
+#include "my_msg_interface/srv/referee_msg.hpp"
+ 
+using std::hex;
 char ascii_art[] = R"(
   _________    ____  _____ __________ 
  /_  __/   |  / __ \/ ___// ____/ __ \
@@ -17,36 +25,52 @@ char ascii_art[] = R"(
 /_/ /_/  |_/_/ |_|/____/\____/\____/  
         Author: SuzukiSuncy
     )";
-using std::hex;
-int main()
-{
-    //TODO:宏提高复用性
-    //TODO:类内成员保护
-    //TODO:导出子类插件给行为树做解包
-    //服务端消息类型
-    //请求uint16_t cmd_id
-    //---
-    //返回  uint16_t cmd_id
-    //     uint16_t data_length
-    //     uint8_t[] data_stream 
-    /*
 
+class RefereeSystem : public rclcpp::Node {
+    public:
+        RefereeSystem(): Node("RefereeSystem") {
+            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequesSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
+            std::thread threadOne([&](){
+                while(1) {
+                    Factory_.testprocess();
+                    sleep(1);
+                };
+
+            });
+            threadOne.detach();
+        }
+
+    private:
+        rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
+        RM_referee::TypeMethodsTables Factory_;
+
+        void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
+            Factory_.Mapserialize(reinterpret_cast<uint8_t*>(&response->data_stream), request->cmd_id);
+            response->cmd_id = request->cmd_id;
+            response->data_length = sizeof(response->data_stream);
+        }
+};
+
+    //TODO:导出子类插件给行为树做解包
+    //TODO:尝试使用模板函数重写
+    //服务端消息类型
+    //请求  uint16 cmd_id
+    //---
+    //返回  uint16 cmd_id
+    //     uint16 data_length
+    //     uint8[] data_stream 
+    /*
     boost::asio::io_service ioService;
     boost::asio::serial_port serialPort(ioService, "/dev/ttyUSB0");
     std::vector<uint8_t> buffer(4096);  // 适当调整缓冲区大小
     */
+int main(int argc, char * argv[])
+{
     printf(ascii_art);
-    RM_referee::TypeMethodsTables Factory_;
-    // Factory_.AddTypeMethod<RM_referee::GameStatusPacket>(RM_referee::GameStatusPacket::GetID());
-    Factory_.AddTypeMethod<RM_referee::ExtSupplyProjectileActionPacket>(RM_referee::ExtSupplyProjectileActionPacket::GetID());
-    Factory_.AddTypeMethod<RM_referee::PowerHeatDataPacket>(RM_referee::PowerHeatDataPacket::GetID());
-    Factory_.AddTypeMethod<RM_referee::CustomRobotDataPacket>(RM_referee::CustomRobotDataPacket::GetID());
-    Factory_.read();
-    while(1) {
-        Factory_.testprocess();
-        // Factory_.MapSolve(0x0102, nullptr, 0);
-        // sleep(1);
-    };
+
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<RefereeSystem>());
+    rclcpp::shutdown();
     return 0;
 }
 

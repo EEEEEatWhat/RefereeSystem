@@ -20,7 +20,14 @@ namespace RM_referee {
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
         CRC8 crc8;
         CRC16 crc16;
+        // GameStatusPacket gamestatuspacket;
+        ExtSupplyProjectileActionPacket extsupplyprojectileactionpacket;
+        PowerHeatDataPacket powerheatdatapacket;
+        CustomRobotDataPacket customrobotdatapacket;
     public:
+        /**
+         * @brief 构造函数将所有类与id绑定
+        */
         TypeMethodsTables();
         ~TypeMethodsTables();
     /**
@@ -41,7 +48,7 @@ namespace RM_referee {
     }
 
         void SerialReadAsync(boost::asio::serial_port& ,std::vector<uint8_t>& );
-    protected:
+        
     /**
      * @brief   通过map键值对解包
                 注意检验cmd_id
@@ -60,7 +67,7 @@ namespace RM_referee {
      * @return  None
      * @warning 
     */
-        void Mapserialize(uint8_t * data ,const uint16_t cmd_id ,uint16_t data_size);
+        void Mapserialize(uint8_t * data ,const uint16_t cmd_id );
 
     };
     

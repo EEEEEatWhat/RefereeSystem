@@ -7,8 +7,9 @@
 #include <memory>
 #include <functional>
 #include <boost/asio.hpp>
-#include"MappingTables.h"
+#include "MappingTables.h"
 //below is for test 
+    #include<cstdlib>
     #include <iostream>
     #include <fstream>
     #include <sstream>
@@ -16,8 +17,15 @@
     #include <iomanip>
 //upside is for test 
 namespace RM_referee{
-    TypeMethodsTables::TypeMethodsTables(){}
+    TypeMethodsTables::TypeMethodsTables() {
+        // m_map.emplace(GameStatusPacket::GetID(), std::make_shared<GameStatusPacket>(&gamestatuspacket));
+        m_map.emplace(extsupplyprojectileactionpacket.GetID(), &extsupplyprojectileactionpacket);
+        m_map.emplace(powerheatdatapacket.GetID(), &powerheatdatapacket);
+        m_map.emplace(customrobotdatapacket.GetID(), &customrobotdatapacket);  
+    }
+
     TypeMethodsTables::~TypeMethodsTables() {}
+
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
@@ -28,14 +36,39 @@ namespace RM_referee{
             return 0;
         }
     }
-    void TypeMethodsTables::Mapserialize(uint8_t * data ,const uint16_t cmd_id ,uint16_t data_size) {
+
+    void TypeMethodsTables::Mapserialize(uint8_t * data ,const uint16_t cmd_id ) {
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
-            RM_referee::GameStatusPacket* packet1 = dynamic_cast<RM_referee::GameStatusPacket*>(it->second.get());
+            it->second->GetID();
+            it->second->GetDataLength();
+
+            RM_referee::PowerHeatDataPacket* TempPowerHeatDataPacket = dynamic_cast<RM_referee::PowerHeatDataPacket*>(it->second.get());
+            if(TempPowerHeatDataPacket !=nullptr) { //匹配成功
+                std::memcpy(data,&TempPowerHeatDataPacket->m_queue.front(),TempPowerHeatDataPacket->GetDataLength());
+                TempPowerHeatDataPacket->m_queue.pop();
+                return;
+            }
+
+            RM_referee::CustomRobotDataPacket* TempCustomRobotDataPacket = dynamic_cast<RM_referee::CustomRobotDataPacket*>(it->second.get());
+            if(TempCustomRobotDataPacket !=nullptr) { //匹配成功
+                std::memcpy(data,&TempCustomRobotDataPacket->m_queue.front(),TempCustomRobotDataPacket->GetDataLength());
+                TempCustomRobotDataPacket->m_queue.pop();
+                return;
+            }
+
+            RM_referee::ExtSupplyProjectileActionPacket* TempExtSupplyProjectileActionPacket = dynamic_cast<RM_referee::ExtSupplyProjectileActionPacket*>(it->second.get());
+            if(TempExtSupplyProjectileActionPacket !=nullptr) { //匹配成功
+                std::memcpy(data,&TempExtSupplyProjectileActionPacket->m_queue.front(),TempExtSupplyProjectileActionPacket->GetDataLength());
+                TempExtSupplyProjectileActionPacket->m_queue.pop();
+                return;
+            }
+            printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         } else {
             printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         }
-    };
+    }
+
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
         boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),
             [&, header = RM_referee::PacketHeader()](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {
@@ -108,7 +141,7 @@ namespace RM_referee{
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
         system("pwd");
-        std::ifstream file("/home/robo/ws19_referee_system/src/referee_system/samples2.txt");
+        std::ifstream file("/home/suzuki/ws00_refereesystem/src/referee_system/samples2.txt");
 
         if (file.is_open()) {
             std::string line;
@@ -140,15 +173,20 @@ namespace RM_referee{
         return 0;
     };
     void TypeMethodsTables::testprocess() {
-            // if(bytes_transferred < sizeof(RM_referee::PacketHeader))
-            //     return ;
             std::cout<<"\n"<<buffer.size()<<"\n";
+            if(buffer.size() == 0) {
+                read();
+                return;
+            };
             if(buffer.size() <= sizeof(RM_referee::PacketHeader))
                 return ;
             while (*it != RM_referee::StartOfFrame) {
                 it++;
                 if (it == buffer.end()) {
-                    std::cout<<"No start of frame found!\n";
+                    std::cout<<"No start of frame found! buffer.size:"<<buffer.size()<<"\n";
+                    read();
+                    // exit(0);
+                    // read();
                     return;
                 }
             }
