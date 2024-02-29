@@ -19,15 +19,18 @@
 //upside is for test 
 namespace RM_referee{
     TypeMethodsTables::TypeMethodsTables() {
+        m_map.clear();
         // m_map.emplace(GameStatusPacket::GetID(), std::make_shared<GameStatusPacket>(&gamestatuspacket));
         m_map.emplace(extsupplyprojectileactionpacket.GetID(), &extsupplyprojectileactionpacket);
         m_map.emplace(powerheatdatapacket.GetID(), &powerheatdatapacket);
         m_map.emplace(customrobotdatapacket.GetID(), &customrobotdatapacket);  
+        m_map.emplace(playgroundeventpacket.GetID(), &playgroundeventpacket);  
     }
 
     TypeMethodsTables::~TypeMethodsTables() {}
 
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
+        std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->SolvePacket(cmd_id ,data ,data_size);
@@ -41,6 +44,7 @@ namespace RM_referee{
     uint16_t TypeMethodsTables::Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type> &Pdata ,const uint16_t cmd_id ) {
         if(powerheatdatapacket.GetID() == cmd_id) {
             std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
+            //检查是否为空
             RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = powerheatdatapacket.m_queue.front();
             const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
             const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
@@ -51,6 +55,18 @@ namespace RM_referee{
             return powerheatdatapacket.GetDataLength();
         }
 
+        if(playgroundeventpacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(playgroundeventpacket.m_mutex);
+            //检查是否为空
+            RM_referee::PlaygroundEventStruct& frontplaygroundeventElement = playgroundeventpacket.m_queue.front();
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontplaygroundeventElement);
+            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + playgroundeventpacket.GetDataLength();
+            Pdata.insert(Pdata.end(), dataStart, dataEnd);
+            playgroundeventpacket.m_queue.pop();
+            playgroundeventpacket.m_mutex.unlock();
+            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,playgroundeventpacket.GetDataLength());
+            return playgroundeventpacket.GetDataLength();
+        }
         if(customrobotdatapacket.GetID() == cmd_id) {
             std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);        
             RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = customrobotdatapacket.m_queue.front();
@@ -80,6 +96,7 @@ namespace RM_referee{
     }
 
     uint16_t TypeMethodsTables::MapSearchDataLength(const uint16_t cmd_id ) {
+        std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->GetDataLength();
@@ -144,6 +161,20 @@ namespace RM_referee{
                 if (PdestSize >= extsupplyprojectileactionpacket.GetDataLength()) {
                     std::memcpy(Pdest,&extsupplyprojectileactionpacket.m_queue.front(), extsupplyprojectileactionpacket.GetDataLength());
                     return extsupplyprojectileactionpacket.GetID();
+                } else {
+                    // Pdest没有足够的空间，处理错误...
+                }
+            } else {
+                // 队列为空，处理错误...
+            }        
+        }
+
+        if(playgroundeventpacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(playgroundeventpacket.m_mutex);
+            if (!playgroundeventpacket.m_queue.empty()) {
+                if (PdestSize >= playgroundeventpacket.GetDataLength()) {
+                    std::memcpy(Pdest,&playgroundeventpacket.m_queue.front(), playgroundeventpacket.GetDataLength());
+                    return playgroundeventpacket.GetID();
                 } else {
                     // Pdest没有足够的空间，处理错误...
                 }
@@ -228,7 +259,8 @@ namespace RM_referee{
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
         system("pwd");
-        std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
+        // std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
+        std::ifstream file("/home/suzuki/RefereeSystem/samples2.txt");
 
         if (file.is_open()) {
             std::string line;

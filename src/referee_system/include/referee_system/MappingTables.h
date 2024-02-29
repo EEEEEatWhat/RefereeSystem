@@ -11,6 +11,7 @@
 #include <memory>
 #include <unordered_map>
 #include <map>
+#include <mutex>
 
 namespace RM_referee {
     using std::hex;
@@ -18,12 +19,14 @@ namespace RM_referee {
     class TypeMethodsTables {
     protected:
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
+        std::mutex m_map_mutex;
         CRC8 crc8;
         CRC16 crc16;
         // GameStatusPacket gamestatuspacket;
         ExtSupplyProjectileActionPacket extsupplyprojectileactionpacket;
         PowerHeatDataPacket powerheatdatapacket;
         CustomRobotDataPacket customrobotdatapacket;
+        PlaygroundEventPacket playgroundeventpacket;
     public:
         /**
          * @brief 构造函数将所有类与id绑定

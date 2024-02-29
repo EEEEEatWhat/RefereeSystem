@@ -42,6 +42,8 @@ namespace RM_referee{
     //     return DateLength();
     // };
 
+    PACKETCOPY(PlaygroundEventPacket)
+    
     PACKETCOPY(CustomRobotDataPacket)
 
     PACKETCOPY(ExtSupplyProjectileActionPacket)
