@@ -79,8 +79,17 @@ namespace RM_referee {
          * @brief   通过map键值对查找获取数据包
          * @param   cmd_id 键，请求的数据包
          * @return  数据包
+         * @warning 未实现
         */
         std::shared_ptr<RefereePacket> MapGetData(const uint16_t cmd_id );
+
+        /**
+         * @brief   通过map键值对查找解包方法
+         * @param   Pdest 解包后存放的地址
+         * @param   cmd_id 键，请求的数据包
+         * @return  已处理的CMD_ID
+        */
+        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id );
     };
     
 

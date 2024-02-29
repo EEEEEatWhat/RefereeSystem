@@ -33,7 +33,7 @@ class RefereeSystem : public rclcpp::Node {
             std::thread threadOne([&](){
                 while(1) {
                     Factory_.testprocess();
-                    // sleep(1);
+                    sleep(1);
                 };
 
             });
@@ -60,10 +60,20 @@ class RefereeSystem : public rclcpp::Node {
             response->data_length = serialize_memcount;
             response->data_stream.resize(serialize_memcount);
             serialize_memcount = Factory_.Mapserialize(response->data_stream, request->cmd_id);
-            auto data = Factory_.MapGetData(request->cmd_id);
-            
-            
-        }
+            // auto data = Factory_.MapGetData(request->cmd_id);
+            RM_referee::PowerHeatDataPacket t;
+            if(Factory_.FilledPacketData(static_cast<void*>(&t.m_value),sizeof(t.m_value),t.GetID()) == request->cmd_id) {
+                std::cout<<std::hex<<"0x"<<t.GetID()<<"\n"<<std::dec;
+                std::cout
+                        <<"chassis电压(mV):"<<t.m_value.chassis_voltage<<"\n"
+                        <<"chassis电流(mA):"<<t.m_value.chassis_current<<"\n"
+                        <<"底盘功率(W):"<<t.m_value.chassis_power<<"\n"
+                        <<"缓冲能量(J):"<<t.m_value.buffer_energy<<"\n"
+                        <<"第1个17mm枪口热量:"<<t.m_value.shooter_17mm_1_barrel_heat<<"\n"
+                        <<"第2个17mm枪口热量:"<<t.m_value.shooter_17mm_2_barrel_heat<<"\n"
+                        <<"42mm枪口热量:"<<t.m_value.shooter_42mm_barrel_heat<<"\n";
+            } 
+        }   
 };
 
     //TODO:导出子类插件给行为树做解包

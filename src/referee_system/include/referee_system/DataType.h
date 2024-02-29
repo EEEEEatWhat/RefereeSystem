@@ -42,10 +42,7 @@ namespace RM_referee{
                 std::cout<<"[Warning : This should not appear !]\n";
                 return 0 ;
             };
-            /**
-             * @brief 获得子类队列的修改权限 --通过类型擦除
-            */
-            // virtual QueueBase* GetQueue() = 0;
+
     };
     
     #define GENERATEPACK(TYPE,STRUCT) \
@@ -58,6 +55,7 @@ namespace RM_referee{
         TYPE##Packet(){};\
         TYPE##Packet(const TYPE##Packet& other):m_queue(other.m_queue){};\
         ~TYPE##Packet(){};\
+        void testsuccess(){std::cout<<"\nSuccess!!!\n";};\
         static uint16_t StaticGetID(){return uint16_t(PacketType::TYPE);};\
         uint16_t GetID(){return StaticGetID();};\
         static uint16_t StaticGetDataLength(){return sizeof(STRUCT);};\

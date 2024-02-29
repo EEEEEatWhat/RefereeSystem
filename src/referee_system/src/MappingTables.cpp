@@ -109,6 +109,52 @@ namespace RM_referee{
         return nullptr;
     }
 
+    uint16_t TypeMethodsTables::FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) {
+        if(powerheatdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
+            if (!powerheatdatapacket.m_queue.empty()) {
+                if (PdestSize >= powerheatdatapacket.GetDataLength()) {
+                    std::memcpy(Pdest,&powerheatdatapacket.m_queue.front(), powerheatdatapacket.GetDataLength());
+                    return powerheatdatapacket.GetID();
+                } else {
+                    // Pdest没有足够的空间，处理错误...
+                }
+            } else {
+                // 队列为空，处理错误...
+            }        
+        }
+
+        if(customrobotdatapacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);
+            if (!customrobotdatapacket.m_queue.empty()) {
+                if (PdestSize >= customrobotdatapacket.GetDataLength()) {
+                    std::memcpy(Pdest,&customrobotdatapacket.m_queue.front(), customrobotdatapacket.GetDataLength());
+                    return customrobotdatapacket.GetID();
+                } else {
+                    // Pdest没有足够的空间，处理错误...
+                }
+            } else {
+                // 队列为空，处理错误...
+            }        
+        }
+
+        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
+            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
+            if (!extsupplyprojectileactionpacket.m_queue.empty()) {
+                if (PdestSize >= extsupplyprojectileactionpacket.GetDataLength()) {
+                    std::memcpy(Pdest,&extsupplyprojectileactionpacket.m_queue.front(), extsupplyprojectileactionpacket.GetDataLength());
+                    return extsupplyprojectileactionpacket.GetID();
+                } else {
+                    // Pdest没有足够的空间，处理错误...
+                }
+            } else {
+                // 队列为空，处理错误...
+            }        
+        }
+
+        printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
+        return 0x0000;
+    }
 
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
         boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),
@@ -182,7 +228,7 @@ namespace RM_referee{
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
         system("pwd");
-        std::ifstream file("/home/suzuki/ws00_refereesystem/src/referee_system/samples2.txt");
+        std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
 
         if (file.is_open()) {
             std::string line;
