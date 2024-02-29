@@ -260,7 +260,7 @@ namespace RM_referee{
     int TypeMethodsTables::read() {
         system("pwd");
         // std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
-        std::ifstream file("/home/suzuki/RefereeSystem/samples2.txt");
+        std::ifstream file("../../../../samples2.txt");
 
         if (file.is_open()) {
             std::string line;
