@@ -20,6 +20,7 @@
 namespace RM_referee{
     TypeMethodsTables::TypeMethodsTables() {
         m_map.clear();
+        //TODO：初始化数据包
         // m_map.emplace(GameStatusPacket::GetID(), std::make_shared<GameStatusPacket>(&gamestatuspacket));
         m_map.emplace(extsupplyprojectileactionpacket.GetID(), &extsupplyprojectileactionpacket);
         m_map.emplace(powerheatdatapacket.GetID(), &powerheatdatapacket);
@@ -41,62 +42,75 @@ namespace RM_referee{
         }
     }
 
-    uint16_t TypeMethodsTables::Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type> &Pdata ,const uint16_t cmd_id ) {
+    std::vector<boost::asio::detail::buffered_stream_storage::byte_type>& TypeMethodsTables::Mapserialize(const uint16_t cmd_id ) {
+    try {
+        // 可能抛出异常的代码
         if(powerheatdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
-            //检查是否为空
-            RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = powerheatdatapacket.m_queue.front();
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
-            Pdata.erase(Pdata.begin(), Pdata.end());
-            Pdata.insert(Pdata.end(), dataStart, dataEnd);
-            powerheatdatapacket.m_queue.pop();
-            powerheatdatapacket.m_mutex.unlock();
-            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,Pdata.size());
-            return powerheatdatapacket.GetDataLength();
+            if(powerheatdatapacket.m_mutex.try_lock()) {
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
+                data.resize(powerheatdatapacket.GetDataLength());
+                data.insert(data.end(), dataStart, dataEnd);
+                powerheatdatapacket.m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
+                return data;
+            } else {
+                data.resize(0);
+                return data;
+            }
+        }
+
+        if(customrobotdatapacket.GetID() == cmd_id) {
+            if(customrobotdatapacket.m_mutex.try_lock()) {
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&customrobotdatapacket.m_value);
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + customrobotdatapacket.GetDataLength();
+                data.resize(customrobotdatapacket.GetDataLength());
+                data.insert(data.end(), dataStart, dataEnd);
+                customrobotdatapacket.m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
+                return data;
+            } else {
+                data.resize(0);
+                return data;
+            }
         }
 
         if(playgroundeventpacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(playgroundeventpacket.m_mutex);
-            //BUG:检查是否为空
-            RM_referee::PlaygroundEventStruct& frontplaygroundeventElement = playgroundeventpacket.m_queue.front();
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontplaygroundeventElement);
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + playgroundeventpacket.GetDataLength();
-            Pdata.erase(Pdata.begin(), Pdata.end());
-            Pdata.insert(Pdata.end(), dataStart, dataEnd);
-            playgroundeventpacket.m_queue.pop();
-            playgroundeventpacket.m_mutex.unlock();
-            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,playgroundeventpacket.GetDataLength());
-            return playgroundeventpacket.GetDataLength();
-        }
-        if(customrobotdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);        
-            RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = customrobotdatapacket.m_queue.front();
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontCustomRobotDataElement);
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + customrobotdatapacket.GetDataLength();
-            Pdata.erase(Pdata.begin(), Pdata.end());
-            Pdata.insert(Pdata.end(), dataStart, dataEnd);
-            customrobotdatapacket.m_queue.pop();
-            customrobotdatapacket.m_mutex.unlock();
-            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,customrobotdatapacket.GetDataLength());
-            return customrobotdatapacket.GetDataLength();
+            if(playgroundeventpacket.m_mutex.try_lock()) {
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&playgroundeventpacket.m_value);
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + playgroundeventpacket.GetDataLength();
+                data.resize(playgroundeventpacket.GetDataLength());
+                data.insert(data.end(), dataStart, dataEnd);
+                playgroundeventpacket.m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
+                return data;
+            } else {
+                data.resize(0);
+                return data;
+            }
         }
 
         if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
-            RM_referee::ExtSupplyProjectileActionStruct& frontExtSupplyProjectileActionElement = extsupplyprojectileactionpacket.m_queue.front();
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontExtSupplyProjectileActionElement);
-            const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + extsupplyprojectileactionpacket.GetDataLength();
-            Pdata.erase(Pdata.begin(), Pdata.end());
-            Pdata.insert(Pdata.end(), dataStart, dataEnd);
-            extsupplyprojectileactionpacket.m_queue.pop();
-            extsupplyprojectileactionpacket.m_mutex.unlock();
-            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,extsupplyprojectileactionpacket.GetDataLength());
-            return extsupplyprojectileactionpacket.GetDataLength();
+            if(extsupplyprojectileactionpacket.m_mutex.try_lock()) {
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&extsupplyprojectileactionpacket.m_value);
+                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + extsupplyprojectileactionpacket.GetDataLength();
+                data.resize(extsupplyprojectileactionpacket.GetDataLength());
+                data.insert(data.end(), dataStart, dataEnd);
+                extsupplyprojectileactionpacket.m_mutex.unlock();
+                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
+                return data;
+            } else {
+                data.resize(0);
+                return data;
+            }
         }
-
+    } catch (const std::system_error& e) {
+        std::cerr << "Caught system_error with code " << e.code()
+                << " meaning " << e.what() << '\n';
+    }
         printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-        return 0;
+        data.resize(0);
+        return data;
     }
 
     uint16_t TypeMethodsTables::MapSearchDataLength(const uint16_t cmd_id ) {
@@ -108,87 +122,6 @@ namespace RM_referee{
             printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
             return 0;
         }
-    }
-
-    std::shared_ptr<RefereePacket> TypeMethodsTables::MapGetData(const uint16_t cmd_id ) {
-        if(powerheatdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
-            return std::shared_ptr<RM_referee::PowerHeatDataPacket>(&powerheatdatapacket, [](RM_referee::PowerHeatDataPacket*){});
-        }
-
-        if(customrobotdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);
-            return std::shared_ptr<RM_referee::CustomRobotDataPacket>(&customrobotdatapacket, [](RM_referee::CustomRobotDataPacket*){});
-        }
-
-        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
-            return std::shared_ptr<RM_referee::ExtSupplyProjectileActionPacket>(&extsupplyprojectileactionpacket, [](RM_referee::ExtSupplyProjectileActionPacket*){});
-        }
-
-        printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-        return nullptr;
-    }
-
-    uint16_t TypeMethodsTables::FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) {
-        if(powerheatdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(powerheatdatapacket.m_mutex);
-            if (!powerheatdatapacket.m_queue.empty()) {
-                if (PdestSize >= powerheatdatapacket.GetDataLength()) {
-                    std::memcpy(Pdest,&powerheatdatapacket.m_queue.front(), powerheatdatapacket.GetDataLength());
-                    return powerheatdatapacket.GetID();
-                } else {
-                    // Pdest没有足够的空间，处理错误...
-                }
-            } else {
-                // 队列为空，处理错误...
-            }        
-        }
-
-        if(customrobotdatapacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(customrobotdatapacket.m_mutex);
-            if (!customrobotdatapacket.m_queue.empty()) {
-                if (PdestSize >= customrobotdatapacket.GetDataLength()) {
-                    std::memcpy(Pdest,&customrobotdatapacket.m_queue.front(), customrobotdatapacket.GetDataLength());
-                    return customrobotdatapacket.GetID();
-                } else {
-                    // Pdest没有足够的空间，处理错误...
-                }
-            } else {
-                // 队列为空，处理错误...
-            }        
-        }
-
-        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(extsupplyprojectileactionpacket.m_mutex);
-            if (!extsupplyprojectileactionpacket.m_queue.empty()) {
-                if (PdestSize >= extsupplyprojectileactionpacket.GetDataLength()) {
-                    std::memcpy(Pdest,&extsupplyprojectileactionpacket.m_queue.front(), extsupplyprojectileactionpacket.GetDataLength());
-                    return extsupplyprojectileactionpacket.GetID();
-                } else {
-                    // Pdest没有足够的空间，处理错误...
-                }
-            } else {
-                // 队列为空，处理错误...
-            }        
-        }
-
-        if(playgroundeventpacket.GetID() == cmd_id) {
-            std::lock_guard<std::mutex> lock(playgroundeventpacket.m_mutex);
-            if (!playgroundeventpacket.m_queue.empty()) {
-                if (PdestSize >= playgroundeventpacket.GetDataLength()) {
-                    std::memcpy(Pdest,&playgroundeventpacket.m_queue.front(), playgroundeventpacket.GetDataLength());
-                    return playgroundeventpacket.GetID();
-                } else {
-                    // Pdest没有足够的空间，处理错误...
-                }
-            } else {
-                // 队列为空，处理错误...
-            }        
-        }
-
-        printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
-        return 0x0000;
     }
 
     uint16_t TypeMethodsTables::FilledPacketData(void* Pdest ,const uint16_t PdestSize ,void* Pdata , const uint16_t PdataSize , const uint16_t cmd_id ) { 
@@ -275,8 +208,8 @@ namespace RM_referee{
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
     int TypeMethodsTables::read() {
         system("pwd");
-        // std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
-        std::ifstream file("../../../../samples2.txt");
+        // std::ifstream file("../../../../samples.txt");
+        std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
 
         if (file.is_open()) {
             std::string line;

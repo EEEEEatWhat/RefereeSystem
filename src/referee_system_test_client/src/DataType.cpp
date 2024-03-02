@@ -15,11 +15,8 @@ namespace RM_referee{
     uint16_t TYPE::SolvePacket(uint16_t cmd_id, uint8_t* data ,uint16_t data_size)  {  \
         if(cmd_id != GetID()) \
             std::cout<<"SolveMethod does not match ID !\n"; \
-        std::memcpy(&m_value,data,data_size); \
         std::lock_guard<std::mutex> lock(m_mutex); \
-        m_queue.push(m_value); \
-        if(m_queue.size() > 30) \
-            m_queue.pop(); \
+        std::memcpy(&m_value,data,data_size); \
         m_mutex.unlock(); \
         std::cout<<std::hex<<"0x"<<cmd_id<<"\n"<<std::dec; \
         return GetDataLength(); \

@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <cstddef>
 #include <iostream>
-#include <queue>
 #include <mutex>
 #include "enums.h"
 namespace RM_referee{
@@ -50,10 +49,8 @@ namespace RM_referee{
     protected:\
     public:\
         STRUCT m_value;\
-        std::queue<STRUCT> m_queue;\
         std::mutex m_mutex;\
         TYPE##Packet(){};\
-        TYPE##Packet(const TYPE##Packet& other):m_queue(other.m_queue){};\
         ~TYPE##Packet(){};\
         void testsuccess(){std::cout<<"\nSuccess!!!\n";};\
         static uint16_t StaticGetID(){return uint16_t(PacketType::TYPE);};\

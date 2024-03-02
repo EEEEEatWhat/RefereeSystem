@@ -27,6 +27,8 @@ namespace RM_referee {
         PowerHeatDataPacket powerheatdatapacket;
         CustomRobotDataPacket customrobotdatapacket;
         PlaygroundEventPacket playgroundeventpacket;
+        std::vector<boost::asio::detail::buffered_stream_storage::byte_type> data;
+
     public:
         /**
          * @brief 构造函数将所有类与id绑定
@@ -69,7 +71,7 @@ namespace RM_referee {
          * @return  已处理的字节数
          * @warning 
         */
-        uint16_t Mapserialize(std::vector<boost::asio::detail::buffered_stream_storage::byte_type>  &Pdata ,const uint16_t cmd_id );
+        std::vector<boost::asio::detail::buffered_stream_storage::byte_type>& Mapserialize(const uint16_t cmd_id ) ;
 
         /**
          * @brief   通过map键值对查找获取数据包长度
