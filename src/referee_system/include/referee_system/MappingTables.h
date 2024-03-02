@@ -43,7 +43,7 @@ namespace RM_referee {
          * @brief  向工厂添加ID和绑定的类
          * @param  Type 类型名
          * @param  cmd_id 
-         * @return NONE
+         * @return void
         */
         template <typename Type>
         void AddTypeMethod(uint16_t cmd_id) {
@@ -89,10 +89,23 @@ namespace RM_referee {
         /**
          * @brief   通过map键值对查找解包方法
          * @param   Pdest 解包后存放的地址
+         * @param   PdestSize 
          * @param   cmd_id 键，请求的数据包
          * @return  已处理的CMD_ID
         */
-        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id );
+        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) ;
+
+        /**
+         * @brief   通过map键值对使用解包方法
+         * @param   Pdest 解包后存放的目标地址
+         * @param   PdestSize 目标地址的大小
+         * @param   Pdata   待解包的数据地址
+         * @param   PdataSize 待解包的数据大小
+         * @param   cmd_id 数据包的键
+         * @return  已处理的
+        */
+        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize ,void* Pdata , const uint16_t PdataSize , const uint16_t cmd_id );
+
     };
     
 

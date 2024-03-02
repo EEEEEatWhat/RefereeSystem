@@ -125,7 +125,7 @@ namespace RM_referee{
     //0x0101  PlaygroundEventPacket 4 PlaygroundEvent
     struct PlaygroundEventStruct { 
         uint32_t event_data; };
-    // static_assert(sizeof(PlaygroundEventStruct) == 4, "PlaygroundEventStruct must be 4 bytes long with packing");
+    static_assert(sizeof(PlaygroundEventStruct) == 4, "PlaygroundEventStruct must be 4 bytes long with packing");
     GENERATEPACK(PlaygroundEvent,PlaygroundEventStruct)
 
     //0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction

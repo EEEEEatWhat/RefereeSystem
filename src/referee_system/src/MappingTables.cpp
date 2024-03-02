@@ -30,7 +30,7 @@ namespace RM_referee{
     TypeMethodsTables::~TypeMethodsTables() {}
 
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
-        std::lock_guard<std::mutex> lock(m_map_mutex);
+        // std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->SolvePacket(cmd_id ,data ,data_size);
@@ -96,7 +96,7 @@ namespace RM_referee{
     }
 
     uint16_t TypeMethodsTables::MapSearchDataLength(const uint16_t cmd_id ) {
-        std::lock_guard<std::mutex> lock(m_map_mutex);
+        // std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->GetDataLength();
@@ -185,6 +185,18 @@ namespace RM_referee{
 
         printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         return 0x0000;
+    }
+
+    uint16_t TypeMethodsTables::FilledPacketData(void* Pdest ,const uint16_t PdestSize ,void* Pdata , const uint16_t PdataSize , const uint16_t cmd_id ) { 
+        // std::lock_guard<std::mutex> lock(m_map_mutex);
+        // auto it = m_map.find(cmd_id);
+        // if(it!=m_map.end()) {
+            std::memcpy(Pdest,Pdata,PdataSize);
+        // } else {
+        //     printf("\ncurrent cmd_id does not exist! error id : 0x%x\n",cmd_id);
+        //     // throw std::out_of_range("cmd_id not found in map");
+        //     return 0;
+        // }
     }
 
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {

@@ -1,6 +1,6 @@
+#include <iostream>
 #include "rclcpp/rclcpp.hpp"
 #include "my_msg_interface/srv/referee_msg.hpp"
-
 class RefereeSystem_Test_Client : public rclcpp::Node {
     public:
         RefereeSystem_Test_Client(): Node("RefereeSystemTestClient") {
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
             RCLCPP_INFO(client->get_logger(),"请求正常处理");
             if(response.get()->data_length != 0) {
                 RCLCPP_INFO(client->get_logger(),"响应正常");
-            } 
+                auto response_data = reinterpret_cast<void *>(response.get()->data_stream.data());            } 
 
         } else {
             RCLCPP_INFO(client->get_logger(),"请求异常");
