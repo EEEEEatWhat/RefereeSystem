@@ -89,13 +89,13 @@ namespace RM_referee{
         uint8_t game_progress : 4; 
         uint16_t stage_remain_time; 
         uint64_t SyncTimeStamp; }; 
-    // static_assert(sizeof(GameStatusStruct) == 4, "GameStatusStruct must be 4 bytes long with packing");
+    // static_assert(sizeof(GameStatusStruct) == 11, "GameStatusStruct must be 11 bytes long with packing");
     // GENERATEPACK(GameStatus,GameStatusStruct)
 
     //0x0002 GameResultEventPacket 1 GameResultEvent
     struct GameResultEventStruct { 
         uint8_t winner; }; 
-    // static_assert(sizeof(GameResultEventStruct) == 4, "GameResultEventStruct must be 4 bytes long with packing");
+    static_assert(sizeof(GameResultEventStruct) == 1, "GameResultEventStruct must be 1 bytes long with packing");
     GENERATEPACK(GameResultEvent,GameResultEventStruct)
 
     //0x0003 GameRobotHPPacket 32 GameRobotHP
@@ -116,8 +116,8 @@ namespace RM_referee{
         uint16_t blue_7_robot_HP; 
         uint16_t blue_outpost_HP; 
         uint16_t blue_base_HP; };
-    // static_assert(sizeof(GameRobotHPStruct) == 4, "GameRobotHPStruct must be 4 bytes long with packing");
-    GENERATEPACK(GameRobotHP,GameRobotHPStruct)
+    static_assert(sizeof(GameRobotHPStruct) == 32, "GameRobotHPStruct must be 32 bytes long with packing");
+    // GENERATEPACK(GameRobotHP,GameRobotHPStruct)
 
     //0x0101  PlaygroundEventPacket 4 PlaygroundEvent
     struct PlaygroundEventStruct { 
@@ -134,11 +134,16 @@ namespace RM_referee{
     static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
     GENERATEPACK(ExtSupplyProjectileAction,ExtSupplyProjectileActionStruct)
 
-    //0x0104 2
-
-    //0x0105 1
+    //0x0104 2 RefereeWarningEventPacket 3 RefereeWarningEvent
+    struct  RefereeWarningEventStruct { 
+        uint8_t level; 
+        uint8_t offending_robot_id; 
+        uint8_t count; };
+    // static_assert(sizeof(ExtSupplyProjectileActionStruct) == 3, "RefereeWarningEvent must be 3 bytes long with packing");
+    // GENERATEPACK(RefereeWarningEvent,RefereeWarningEventStruct)
+    //0x0105 1 DartInfoPacket 3 DartInfo
     
-    //0x0201 27
+    //0x0201 27 RobotStatePacket 27 RobotState
 
     //0x0202 PowerHeatDataPacket 16 PowerHeatData
     struct PowerHeatDataStruct { 
@@ -152,29 +157,29 @@ namespace RM_referee{
     static_assert(sizeof(PowerHeatDataStruct) == 16, "PowerHeatDataStruct must be 16 bytes long with packing");
     GENERATEPACK(PowerHeatData,PowerHeatDataStruct)
 
-    //0x0203 16
-    //0x0204 1
-    //0x0205 1
-    //0x0206 1
-    //0x0207 7
-    //0x0208 6
-    //0x0209 4
-    //0x020A 6
-    //0x020B 40
-    //0x020C 6
-    //0x020D 4
+    //0x0203 RobotPositionPacket 16 RobotPosition
+    //0x0204 RobotBuffPacket 1 RobotBuff
+    //0x0205 AirSupportDataPacket 1 AirSupportData
+    //0x0206 DamageEventPacket 1 DamageEvent
+    //0x0207 ShootEventPacket 7 ShootEvent
+    //0x0208 ProjectileAllowancePacket 6 ProjectileAllowance
+    //0x0209 RobotRfidStatePacket 4 RobotRfidState
+    //0x020A DartClientCmdPacket 6 DartClientCmd
+    //0x020B GroundRobotPositionPacket 40 GroundRobotPosition
+    //0x020C RadarMarkDataPacket 6 RadarMarkData
+    //0x020D SentryInfoPacket 4 SentryInfo
     
-    //0x0301 128
+    //0x0301 InterRobotCommsMessagePacket 128 InterRobotCommsMessage
     //0x0302 CustomRobotDataPacket 30 CustomRobotData
     struct CustomRobotDataStruct { 
         uint8_t data[30]; };
     static_assert(sizeof(CustomRobotDataStruct) == 30, "CustomRobotDataStruct must be 30 bytes long with packing");
     GENERATEPACK(CustomRobotData,CustomRobotDataStruct)
-    //0x0303 15
-    //0x0304 12 
-    //0x0305 10
-    //0x0306 8
-    //0x0307 103
-    //0x0308 34
+    //0x0303 MinimapInteractionCommsMessagePacket 15 MinimapInteractionCommsMessage
+    //0x0304 KeyboardMouseMessagePacket 12 KeyboardMouseMessage
+    //0x0305 ClientMinimapRecvPacket 10 ClientMinimapRecv
+    //0x0306 CustomClientDataPacket 8 CustomClientData
+    //0x0307 MapDataPacket 103 MapData
+    //0x0308 CustomInfoPacket 34 CustomInfo
 
 }

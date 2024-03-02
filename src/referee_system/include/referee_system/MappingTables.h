@@ -55,7 +55,7 @@ namespace RM_referee {
         void SerialReadAsync(boost::asio::serial_port& ,std::vector<uint8_t>& );
         
         /**
-         * @brief  通过map键值对解包并存储到类内的队列中
+         * @brief  通过map键值对解包并存储到类内的结构体中
         * @param   cmd_id 键
         * @param   data 待解包数据
         * @param   data_size 数据包大小
@@ -84,7 +84,7 @@ namespace RM_referee {
          * @brief   通过map键值对查找获取数据包
          * @param   cmd_id 键，请求的数据包
          * @return  数据包
-         * @warning 未实现
+         * @warning 已弃用
         */
         std::shared_ptr<RefereePacket> MapGetData(const uint16_t cmd_id );
 
@@ -94,6 +94,7 @@ namespace RM_referee {
          * @param   PdestSize 
          * @param   cmd_id 键，请求的数据包
          * @return  已处理的CMD_ID
+         * @warning 已弃用  
         */
         uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) ;
 
@@ -104,7 +105,7 @@ namespace RM_referee {
          * @param   Pdata   待解包的数据地址
          * @param   PdataSize 待解包的数据大小
          * @param   cmd_id 数据包的键
-         * @return  已处理的
+         * @return  
         */
         uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize ,void* Pdata , const uint16_t PdataSize , const uint16_t cmd_id );
 

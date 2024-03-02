@@ -42,9 +42,26 @@ namespace RM_referee{
         }
     }
 
+    #define SERIALIZEPACKET(PACKET) \
+            if(PACKET.GetID() == cmd_id) { \
+                if(PACKET.m_mutex.try_lock()) { \
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&PACKET.m_value); \
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + PACKET.GetDataLength(); \
+                    data.resize(PACKET.GetDataLength()); \
+                    data.erase(data.begin(),data.end()); \
+                    data.insert(data.end(), dataStart, dataEnd); \
+                    PACKET.m_mutex.unlock(); \
+                    printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size()); \
+                    return data; \
+                } else { \
+                    data.resize(0); \
+                    return data; \
+                } \
+            } \
+
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>& TypeMethodsTables::Mapserialize(const uint16_t cmd_id ) {
-    try {
-        // 可能抛出异常的代码
+    try { // 可能抛出异常的代码
+        /**
         if(powerheatdatapacket.GetID() == cmd_id) {
             if(powerheatdatapacket.m_mutex.try_lock()) {
                 const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
@@ -59,51 +76,12 @@ namespace RM_referee{
                 return data;
             }
         }
+        */
+        SERIALIZEPACKET(powerheatdatapacket)
+        SERIALIZEPACKET(customrobotdatapacket)
+        SERIALIZEPACKET(playgroundeventpacket)
+        SERIALIZEPACKET(extsupplyprojectileactionpacket)
 
-        if(customrobotdatapacket.GetID() == cmd_id) {
-            if(customrobotdatapacket.m_mutex.try_lock()) {
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&customrobotdatapacket.m_value);
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + customrobotdatapacket.GetDataLength();
-                data.resize(customrobotdatapacket.GetDataLength());
-                data.insert(data.end(), dataStart, dataEnd);
-                customrobotdatapacket.m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
-                return data;
-            } else {
-                data.resize(0);
-                return data;
-            }
-        }
-
-        if(playgroundeventpacket.GetID() == cmd_id) {
-            if(playgroundeventpacket.m_mutex.try_lock()) {
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&playgroundeventpacket.m_value);
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + playgroundeventpacket.GetDataLength();
-                data.resize(playgroundeventpacket.GetDataLength());
-                data.insert(data.end(), dataStart, dataEnd);
-                playgroundeventpacket.m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
-                return data;
-            } else {
-                data.resize(0);
-                return data;
-            }
-        }
-
-        if(extsupplyprojectileactionpacket.GetID() == cmd_id) {
-            if(extsupplyprojectileactionpacket.m_mutex.try_lock()) {
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&extsupplyprojectileactionpacket.m_value);
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + extsupplyprojectileactionpacket.GetDataLength();
-                data.resize(extsupplyprojectileactionpacket.GetDataLength());
-                data.insert(data.end(), dataStart, dataEnd);
-                extsupplyprojectileactionpacket.m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
-                return data;
-            } else {
-                data.resize(0);
-                return data;
-            }
-        }
     } catch (const std::system_error& e) {
         std::cerr << "Caught system_error with code " << e.code()
                 << " meaning " << e.what() << '\n';
@@ -215,22 +193,12 @@ namespace RM_referee{
             std::string line;
             while (std::getline(file, line)) {
                 std::istringstream iss(line);
-
                 while (!iss.eof()) {
                     int byte;
                     iss >> std::hex >> byte;
                     buffer.push_back(static_cast<uint8_t>(byte));
                 }
-
-                // 演示：输出读取的十六进制数据
-                // std::cout << "Read Hex Data: ";
-                // for (const auto& byte : buffer) {
-                //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
-                // }
-                // std::cout << std::endl;
-                // std::cout<<std::dec<<buffer.size();
             }
-
             file.close();
         } else {
             std::cerr << "Unable to open the file." << std::endl;
@@ -240,6 +208,7 @@ namespace RM_referee{
         it = buffer.begin();//重复执行
         return 0;
     };
+
     void TypeMethodsTables::testprocess() {
             std::cout<<"\n"<<buffer.size()<<"\n";
             if(buffer.size() == 0) {
@@ -271,7 +240,6 @@ namespace RM_referee{
                 }
             } else
                 it ++;
-
     };
 
 }

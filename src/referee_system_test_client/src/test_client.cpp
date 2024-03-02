@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
                     std::memcpy(&T,result->data_stream.data(),result->data_length);
                     RCLCPP_INFO(client->get_logger(),"chassis电压(mV):%d",T.chassis_voltage);
                     RCLCPP_INFO(client->get_logger(),"chassis电流(mA):%d",T.chassis_current);
-                    RCLCPP_INFO(client->get_logger(),"底盘功率(W):%d",T.chassis_power);
+                    RCLCPP_INFO(client->get_logger(),"底盘功率(W):%lf",T.chassis_power);
                     RCLCPP_INFO(client->get_logger(),"缓冲能量(J):%d",T.buffer_energy);
                     RCLCPP_INFO(client->get_logger(),"第1个17mm枪口热量:%d",T.shooter_17mm_1_barrel_heat);
                     RCLCPP_INFO(client->get_logger(),"第2个17mm枪口热量:%d",T.shooter_17mm_2_barrel_heat);
