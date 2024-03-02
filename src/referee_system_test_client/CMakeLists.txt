@@ -19,6 +19,11 @@ ament_target_dependencies(
   rclcpp
   my_msg_interface
   )
+target_include_directories(referee_system_test_client
+  PRIVATE
+    include
+    ${PROJECT_SOURCE_DIR}/include/referee_system_test_client/
+)
 install(TARGETS 
 referee_system_test_client
   DESTINATION lib/${PROJECT_NAME})
