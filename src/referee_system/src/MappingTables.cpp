@@ -30,7 +30,7 @@ namespace RM_referee{
     TypeMethodsTables::~TypeMethodsTables() {}
 
     uint16_t TypeMethodsTables::MapSolve(const uint16_t cmd_id , uint8_t* data ,uint16_t data_size){
-        // std::lock_guard<std::mutex> lock(m_map_mutex);
+        std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->SolvePacket(cmd_id ,data ,data_size);
@@ -48,19 +48,21 @@ namespace RM_referee{
             RM_referee::PowerHeatDataStruct& frontPowerHeatDataElement = powerheatdatapacket.m_queue.front();
             const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontPowerHeatDataElement);
             const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
+            Pdata.erase(Pdata.begin(), Pdata.end());
             Pdata.insert(Pdata.end(), dataStart, dataEnd);
             powerheatdatapacket.m_queue.pop();
             powerheatdatapacket.m_mutex.unlock();
-            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,powerheatdatapacket.GetDataLength());
+            printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,Pdata.size());
             return powerheatdatapacket.GetDataLength();
         }
 
         if(playgroundeventpacket.GetID() == cmd_id) {
             std::lock_guard<std::mutex> lock(playgroundeventpacket.m_mutex);
-            //检查是否为空
+            //BUG:检查是否为空
             RM_referee::PlaygroundEventStruct& frontplaygroundeventElement = playgroundeventpacket.m_queue.front();
             const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontplaygroundeventElement);
             const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + playgroundeventpacket.GetDataLength();
+            Pdata.erase(Pdata.begin(), Pdata.end());
             Pdata.insert(Pdata.end(), dataStart, dataEnd);
             playgroundeventpacket.m_queue.pop();
             playgroundeventpacket.m_mutex.unlock();
@@ -72,6 +74,7 @@ namespace RM_referee{
             RM_referee::CustomRobotDataStruct& frontCustomRobotDataElement = customrobotdatapacket.m_queue.front();
             const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontCustomRobotDataElement);
             const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + customrobotdatapacket.GetDataLength();
+            Pdata.erase(Pdata.begin(), Pdata.end());
             Pdata.insert(Pdata.end(), dataStart, dataEnd);
             customrobotdatapacket.m_queue.pop();
             customrobotdatapacket.m_mutex.unlock();
@@ -84,6 +87,7 @@ namespace RM_referee{
             RM_referee::ExtSupplyProjectileActionStruct& frontExtSupplyProjectileActionElement = extsupplyprojectileactionpacket.m_queue.front();
             const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&frontExtSupplyProjectileActionElement);
             const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + extsupplyprojectileactionpacket.GetDataLength();
+            Pdata.erase(Pdata.begin(), Pdata.end());
             Pdata.insert(Pdata.end(), dataStart, dataEnd);
             extsupplyprojectileactionpacket.m_queue.pop();
             extsupplyprojectileactionpacket.m_mutex.unlock();
@@ -96,7 +100,7 @@ namespace RM_referee{
     }
 
     uint16_t TypeMethodsTables::MapSearchDataLength(const uint16_t cmd_id ) {
-        // std::lock_guard<std::mutex> lock(m_map_mutex);
+        std::lock_guard<std::mutex> lock(m_map_mutex);
         auto it = m_map.find(cmd_id);
         if(it!=m_map.end()) {
             return it->second->GetDataLength();
