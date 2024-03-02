@@ -33,9 +33,8 @@ class RefereeSystem : public rclcpp::Node {
             std::thread threadOne([&](){
                 while(1) {
                     Factory_.testprocess();
-                    sleep(0.1);
+                    sleep(1);
                 };
-
             });
             threadOne.detach();
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
@@ -56,9 +55,9 @@ class RefereeSystem : public rclcpp::Node {
                 return;
             }
             response->cmd_id = request->cmd_id;
-            response->data_length = serialize_memcount;
             response->data_stream.resize(serialize_memcount);
             serialize_memcount = Factory_.Mapserialize(response->data_stream, request->cmd_id);
+            response->data_length = serialize_memcount;
             // auto data = Factory_.MapGetData(request->cmd_id);
             RM_referee::PowerHeatDataPacket t;
             if(Factory_.FilledPacketData(static_cast<void*>(&t.m_value),sizeof(t.m_value),t.GetID()) == request->cmd_id) {
