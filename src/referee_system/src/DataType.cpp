@@ -28,12 +28,59 @@ namespace RM_referee{
             return DateLength();
         };
     */
-    PACKETCOPY(PowerHeatDataPacket)
+   
+    PACKETCOPY(GameStatusPacket)
+
+    PACKETCOPY(GameResultEventPacket)
+
+    PACKETCOPY(GameRobotHPPacket)
 
     PACKETCOPY(PlaygroundEventPacket)
     
-    PACKETCOPY(CustomRobotDataPacket)
-
     PACKETCOPY(ExtSupplyProjectileActionPacket)
+    
+    PACKETCOPY(DartInfoPacket)
+    
+    PACKETCOPY(RobotPositionPacket)
+    
+    PACKETCOPY(RobotStatePacket)
+    
+    PACKETCOPY(RefereeWarningEventPacket)
+    
+    PACKETCOPY(PowerHeatDataPacket)
+    
+    PACKETCOPY(RobotBuffPacket)
+    
+    PACKETCOPY(AirSupportDataPacket)
+    
+    PACKETCOPY(DamageEventPacket)
+    
+    PACKETCOPY(ShootEventPacket)
+    
+    PACKETCOPY(ProjectileAllowancePacket)
+    
+    PACKETCOPY(RobotRfidStatePacket)
+    
+    PACKETCOPY(DartClientCmdPacket)
+    
+    PACKETCOPY(GroundRobotPositionPacket)
+    
+    PACKETCOPY(RadarMarkDataPacket)
+    
+    PACKETCOPY(SentryInfoPacket)
+    
+    PACKETCOPY(CustomRobotDataPacket)
+    
+    PACKETCOPY(MinimapInteractionCommsMessagePacket)
+    
+    PACKETCOPY(KeyboardMouseMessagePacket)
+    
+    PACKETCOPY(ClientMinimapRecvPacket)
+    
+    PACKETCOPY(CustomClientDataPacket)
+    
+    PACKETCOPY(MapDataPacket)
+    
+    PACKETCOPY(CustomInfoPacket)
 
 }
