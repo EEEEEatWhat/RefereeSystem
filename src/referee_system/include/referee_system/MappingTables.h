@@ -18,16 +18,39 @@ namespace RM_referee {
 
     class TypeMethodsTables {
     protected:
+        std::vector<boost::asio::detail::buffered_stream_storage::byte_type> data;
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
         std::mutex m_map_mutex;
         CRC8 crc8;
         CRC16 crc16;
-        // GameStatusPacket gamestatuspacket;
-        ExtSupplyProjectileActionPacket extsupplyprojectileactionpacket;
-        PowerHeatDataPacket powerheatdatapacket;
-        CustomRobotDataPacket customrobotdatapacket;
-        PlaygroundEventPacket playgroundeventpacket;
-        std::vector<boost::asio::detail::buffered_stream_storage::byte_type> data;
+
+        GameStatusPacket gamestatuspacket ;
+        GameResultEventPacket gameresulteventpacket ; 
+        GameRobotHPPacket gamerobothppacket ;
+        PlaygroundEventPacket playgroundeventpacket ;
+        ExtSupplyProjectileActionPacket extsupplyprojectileactionpacket ;
+        DartInfoPacket dartinfopacket ;
+        RobotPositionPacket robotpositionpacket ;
+        RobotStatePacket robotstatepacket ;
+        RefereeWarningEventPacket refereewarningeventpacket ; 
+        PowerHeatDataPacket powerheatdatapacket ;
+        RobotBuffPacket robotbuffpacket ;
+        AirSupportDataPacket airsupportdatapacket ;
+        DamageEventPacket damageeventpacket ;
+        ShootEventPacket shooteventpacket ;
+        ProjectileAllowancePacket projectileallowancepacket ;
+        RobotRfidStatePacket robotrfidstatepacket ;
+        DartClientCmdPacket dartclientcmdpacket ;
+        GroundRobotPositionPacket groundrobotpositionpacket ;
+        RadarMarkDataPacket radarmarkdatapacket ;
+        SentryInfoPacket sentryinfopacket ;
+        CustomRobotDataPacket customrobotdatapacket ;
+        MinimapInteractionCommsMessagePacket minimapinteractioncommsmessagepacket ;
+        KeyboardMouseMessagePacket keyboardmousemessagepacket ;
+        ClientMinimapRecvPacket clientminimaprecvpacket ;
+        CustomClientDataPacket customclientdatapacket ;
+        MapDataPacket mapdatapacket ;
+        CustomInfoPacket custominfopacket ;
 
     public:
         /**

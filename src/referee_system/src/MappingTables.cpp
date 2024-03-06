@@ -21,11 +21,33 @@ namespace RM_referee{
     TypeMethodsTables::TypeMethodsTables() {
         m_map.clear();
         //TODO：初始化数据包
-        // m_map.emplace(GameStatusPacket::GetID(), std::make_shared<GameStatusPacket>(&gamestatuspacket));
-        m_map.emplace(extsupplyprojectileactionpacket.GetID(), &extsupplyprojectileactionpacket);
-        m_map.emplace(powerheatdatapacket.GetID(), &powerheatdatapacket);
-        m_map.emplace(customrobotdatapacket.GetID(), &customrobotdatapacket);  
+        m_map.emplace(gamestatuspacket.GetID(),&gamestatuspacket);
+        m_map.emplace(gameresulteventpacket.GetID(),&gameresulteventpacket);
+        m_map.emplace(gamerobothppacket.GetID(),&gamerobothppacket);
         m_map.emplace(playgroundeventpacket.GetID(), &playgroundeventpacket);  
+        m_map.emplace(extsupplyprojectileactionpacket.GetID(), &extsupplyprojectileactionpacket);
+        m_map.emplace(dartinfopacket.GetID(),&dartinfopacket);
+        m_map.emplace(robotpositionpacket.GetID(),&robotpositionpacket);
+        m_map.emplace(robotstatepacket.GetID(),&robotstatepacket);
+        m_map.emplace(refereewarningeventpacket.GetID(),&refereewarningeventpacket);
+        m_map.emplace(powerheatdatapacket.GetID(), &powerheatdatapacket);
+        m_map.emplace(robotbuffpacket.GetID(),&robotbuffpacket);
+        m_map.emplace(airsupportdatapacket.GetID(),&airsupportdatapacket);
+        m_map.emplace(damageeventpacket.GetID(),&damageeventpacket);
+        m_map.emplace(shooteventpacket.GetID(),&shooteventpacket);
+        m_map.emplace(projectileallowancepacket.GetID(),&projectileallowancepacket);
+        m_map.emplace(robotrfidstatepacket.GetID(),&robotrfidstatepacket);
+        m_map.emplace(dartclientcmdpacket.GetID(),&dartclientcmdpacket);
+        m_map.emplace(groundrobotpositionpacket.GetID(),&groundrobotpositionpacket);
+        m_map.emplace(radarmarkdatapacket.GetID(),&radarmarkdatapacket);
+        m_map.emplace(sentryinfopacket.GetID(),&sentryinfopacket);
+        m_map.emplace(customrobotdatapacket.GetID(), &customrobotdatapacket);  
+        m_map.emplace(minimapinteractioncommsmessagepacket.GetID(),&minimapinteractioncommsmessagepacket);
+        m_map.emplace(keyboardmousemessagepacket.GetID(),&keyboardmousemessagepacket);
+        m_map.emplace(clientminimaprecvpacket.GetID(),&clientminimaprecvpacket);
+        m_map.emplace(customclientdatapacket.GetID(),&customclientdatapacket);
+        m_map.emplace(mapdatapacket.GetID(),&mapdatapacket);
+        m_map.emplace(custominfopacket.GetID(),&custominfopacket);
     }
 
     TypeMethodsTables::~TypeMethodsTables() {}
@@ -77,10 +99,34 @@ namespace RM_referee{
             }
         }
         */
-        SERIALIZEPACKET(powerheatdatapacket)
-        SERIALIZEPACKET(customrobotdatapacket)
-        SERIALIZEPACKET(playgroundeventpacket)
-        SERIALIZEPACKET(extsupplyprojectileactionpacket)
+        SERIALIZEPACKET(gamestatuspacket);
+        SERIALIZEPACKET(gameresulteventpacket);
+        SERIALIZEPACKET(gamerobothppacket);
+        SERIALIZEPACKET(playgroundeventpacket);
+        SERIALIZEPACKET(extsupplyprojectileactionpacket);
+        SERIALIZEPACKET(dartinfopacket);
+        SERIALIZEPACKET(robotpositionpacket);
+        SERIALIZEPACKET(robotstatepacket);
+        SERIALIZEPACKET(refereewarningeventpacket);
+        SERIALIZEPACKET(powerheatdatapacket);
+        SERIALIZEPACKET(robotbuffpacket);
+        SERIALIZEPACKET(airsupportdatapacket);
+        SERIALIZEPACKET(damageeventpacket);
+        SERIALIZEPACKET(shooteventpacket);
+        SERIALIZEPACKET(projectileallowancepacket);
+        SERIALIZEPACKET(robotrfidstatepacket);
+        SERIALIZEPACKET(dartclientcmdpacket);
+        SERIALIZEPACKET(groundrobotpositionpacket);
+        SERIALIZEPACKET(radarmarkdatapacket);
+        SERIALIZEPACKET(sentryinfopacket);
+        SERIALIZEPACKET(customrobotdatapacket);
+        SERIALIZEPACKET(minimapinteractioncommsmessagepacket);
+        SERIALIZEPACKET(keyboardmousemessagepacket);
+        SERIALIZEPACKET(clientminimaprecvpacket);
+        SERIALIZEPACKET(customclientdatapacket);
+        SERIALIZEPACKET(mapdatapacket);
+        SERIALIZEPACKET(custominfopacket);
+        
 
     } catch (const std::system_error& e) {
         std::cerr << "Caught system_error with code " << e.code()
