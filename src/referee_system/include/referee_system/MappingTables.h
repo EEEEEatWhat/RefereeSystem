@@ -52,6 +52,11 @@ namespace RM_referee {
         MapDataPacket mapdatapacket ;
         CustomInfoPacket custominfopacket ;
 
+        //below is test
+        std::vector<uint8_t> testbuffer;
+        RM_referee::PacketHeader testheader;
+        std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;
+
     public:
         /**
          * @brief 构造函数将所有类与id绑定
@@ -109,7 +114,7 @@ namespace RM_referee {
          * @return  数据包
          * @warning 已弃用
         */
-        std::shared_ptr<RefereePacket> MapGetData(const uint16_t cmd_id );
+        std::shared_ptr<RefereePacket> MapGetData(const uint16_t cmd_id ) = delete;
 
         /**
          * @brief   通过map键值对查找解包方法
@@ -119,7 +124,7 @@ namespace RM_referee {
          * @return  已处理的CMD_ID
          * @warning 已弃用  
         */
-        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) ;
+        uint16_t FilledPacketData(void* Pdest ,const uint16_t PdestSize , const uint16_t cmd_id ) = delete;
 
         /**
          * @brief   通过map键值对使用解包方法

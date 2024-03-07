@@ -223,12 +223,12 @@ namespace RM_referee{
     GENERATEPACK(ShootEvent,ShootEventSruct)
 
     //0x0208 ProjectileAllowancePacket 6 ProjectileAllowance
-    struct ProjectileAllowanceStrtuct { 
+    struct ProjectileAllowanceStruct { 
         uint16_t projectile_allowance_17mm; 
         uint16_t projectile_allowance_42mm;   
         uint16_t remaining_gold_coin; }; 
-    static_assert(sizeof(ProjectileAllowanceStrtuct) == 6, "ProjectileAllowanceStrtuct must be 16 bytes long with packing");
-    GENERATEPACK(ProjectileAllowance,ProjectileAllowanceStrtuct)
+    static_assert(sizeof(ProjectileAllowanceStruct) == 6, "ProjectileAllowanceStruct must be 16 bytes long with packing");
+    GENERATEPACK(ProjectileAllowance,ProjectileAllowanceStruct)
 
     //0x0209 RobotRfidStatePacket 4 RobotRfidState
     struct RobotRfidStateStruct { 

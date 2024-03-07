@@ -84,6 +84,8 @@ namespace RM_referee{
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>& TypeMethodsTables::Mapserialize(const uint16_t cmd_id ) {
     try { // 可能抛出异常的代码
         /**
+        SERIALIZEPACKET(powerheatdatapacket);
+         * * * * * * * * * * * * * * * * * * * 
         if(powerheatdatapacket.GetID() == cmd_id) {
             if(powerheatdatapacket.m_mutex.try_lock()) {
                 const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
@@ -160,65 +162,24 @@ namespace RM_referee{
         // }
     }
 
+    /** 
+     * TODO:
+     * 数据处理逻辑
+     * 0.第一字节默认0xA5
+     * 1.接受长度小于头长度则等待数据再处理
+     * 3.CRC校验
+     *  清除处理过数据包，开始数据端处理
+     * 0.检查buffer剩余数据长度
+     * 1.正常则处理，缺少则等待数据再处理
+     * 2.CRC16校验
+     * 3.调用Factory.Solve()
+    */
     void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
         boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),
             [&, header = RM_referee::PacketHeader()](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {
                 if (!ec) {
-                    /** 
-                     * TODO:
-                     * 数据处理逻辑
-                     * 0.第一字节默认0xA5
-                     * 1.接受长度小于头长度，退出，等待下次 ？
-                     * 2.直接memcpy（大小端?）  
-                     * 3.CRC校验
-                     *  清除处理过的头数据包，开始数据端处理
-                     * 0.检查buffer剩余数据长度
-                     * 1.正常则处理，缺少则等待数据再处理（接受其他的不完整数据？）
-                     * 2.CRC16校验
-                     * 3.调用Factory.Solve()
-                    */
-                    auto it = buffer.begin();
-                    while (*it != RM_referee::StartOfFrame) {
-                        it++;
-                        if (it == buffer.end())
-                            return 0;
-                    }
-                    if(bytes_transferred < sizeof(RM_referee::PacketHeader))
-                        return 0;
-                    std::memcpy(&header, &(*it), sizeof(RM_referee::PacketHeader));
-                    //CRC8
-                    // header.CRC8;
-                    it+=sizeof(RM_referee::PacketHeader);
-                    buffer.erase(buffer.begin(), it);
-                    uint16_t cmd_id = static_cast<uint16_t>(*it << 8 | *(it+1));
-                    //CRC16
-                    //CRC16();
-                    MapSolve(cmd_id,&(*(it+2)),header.DataLength);
-                    /*
-                    boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(header.DataLength),
-                        [&, data = std::move(header)](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {
-                            if (!ec) {
-                                // 在这里处理完整的数据段
-                                std::cout << "Received data: ";
-                                for (auto byte : buffer) {
-                                    std::cout << static_cast<int>(byte);
-                                }
-                                std::cout << std::endl;
-
-                                // 继续下一次异步读取
-                                // boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(DataHeader)),
-                                //     [&, header = DataHeader()](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {
-                                //         // 处理下一次异步读取的完成事件
-                                //     });
-                            } else {
-                                std::cerr << "Error: Incomplete data." << std::endl;
-                            }
-                        });
-                    */
-                } else {
-                    std::cerr << "Error: Incomplete header." << std::endl;
+                    
                 }
-                return 0;
             }
             
         );
@@ -227,9 +188,7 @@ namespace RM_referee{
 
 
 
-    std::vector<uint8_t> buffer;
-    RM_referee::PacketHeader header;
-    std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;//重复执行
+
     int TypeMethodsTables::read() {
         system("pwd");
         // std::ifstream file("../../../../samples.txt");
@@ -242,7 +201,7 @@ namespace RM_referee{
                 while (!iss.eof()) {
                     int byte;
                     iss >> std::hex >> byte;
-                    buffer.push_back(static_cast<uint8_t>(byte));
+                    testbuffer.push_back(static_cast<uint8_t>(byte));
                 }
             }
             file.close();
@@ -250,38 +209,36 @@ namespace RM_referee{
             std::cerr << "Unable to open the file." << std::endl;
         }
 
-        header = RM_referee::PacketHeader();
-        it = buffer.begin();//重复执行
+        testheader = RM_referee::PacketHeader();
+        it = testbuffer.begin();//重复执行
         return 0;
     };
 
     void TypeMethodsTables::testprocess() {
-            std::cout<<"\n"<<buffer.size()<<"\n";
-            if(buffer.size() == 0) {
+            // std::cout<<testbuffer.size()<<"\n";
+            if(testbuffer.size() == 0) {
                 read();
                 return;
             };
-            if(buffer.size() <= sizeof(RM_referee::PacketHeader))
+            if(testbuffer.size() <= sizeof(RM_referee::PacketHeader))
                 return ;
             while (*it != RM_referee::StartOfFrame) {
                 it++;
-                if (it == buffer.end()) {
-                    // std::cout<<"No start of frame found! buffer.size:"<<buffer.size()<<"\n";
+                if (it == testbuffer.end()) {
                     read();
-                    // exit(0);
                     return;
                 }
             }
-            buffer.erase(buffer.begin(), it);
-            it = buffer.begin();
-            std::memcpy(&header, &(*it), sizeof(RM_referee::PacketHeader));
+            testbuffer.erase(testbuffer.begin(), it);
+            it = testbuffer.begin();
+            std::memcpy(&testheader, &(*it), sizeof(RM_referee::PacketHeader));
             //CRC8
-            if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&header),sizeof(RM_referee::PacketHeader))) {
+            if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&testheader),sizeof(RM_referee::PacketHeader))) {
                 it += sizeof(RM_referee::PacketHeader);
                 uint16_t cmd_id = static_cast<uint16_t>( ((*it)<<8) | (*(it+1)) );
                 //CRC16
-                if(crc16.Verify_CRC16_Check_Sum(&(*buffer.begin()),sizeof(RM_referee::PacketHeader) + 2 + header.DataLength + 2)) {
-                    uint16_t erased = MapSolve(cmd_id,&(*(it+2)),header.DataLength);
+                if(crc16.Verify_CRC16_Check_Sum(&(*testbuffer.begin()),sizeof(RM_referee::PacketHeader) + 2 + testheader.DataLength + 2)) {
+                    uint16_t erased = MapSolve(cmd_id,&(*(it+2)),testheader.DataLength);
                     if(erased) it += 2+erased+2;
                 }
             } else
