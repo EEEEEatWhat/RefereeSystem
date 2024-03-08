@@ -1,0 +1,11 @@
+/RefereeSystem:
+  ros__parameters:
+    buffersize: 4096
+    serialport_arry:
+    - ttyACM0
+    - ttyUSB0
+    - ttyUSB1
+    - ttyUSB2
+    - ttyACM1
+    - ttyACM2
+    use_sim_time: false

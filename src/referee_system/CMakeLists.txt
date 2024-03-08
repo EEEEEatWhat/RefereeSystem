@@ -15,14 +15,15 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(my_msg_interface REQUIRED)
 
-add_executable(mytest 
-  src/test.cpp 
+add_executable(run_referee_system 
+  # src/test.cpp 
+  src/referee_system.cpp
   src/MappingTables.cpp 
   src/DataType.cpp
   )
 
 ament_target_dependencies(
-  mytest
+  run_referee_system
   ament_cmake
   rclcpp
   std_msgs
@@ -30,15 +31,42 @@ ament_target_dependencies(
   my_msg_interface
 
   )
-target_include_directories(mytest
+target_include_directories(run_referee_system
   PRIVATE
     include
     ${PROJECT_SOURCE_DIR}/include/referee_system/
 )
 install(TARGETS 
-mytest
+run_referee_system
 DESTINATION lib/${PROJECT_NAME})
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # #
+add_executable(runtest 
+  src/test.cpp 
+  # src/referee_system.cpp
+  src/MappingTables.cpp 
+  src/DataType.cpp
+  )
+
+ament_target_dependencies(
+  runtest
+  ament_cmake
+  rclcpp
+  std_msgs
+  geometry_msgs
+  my_msg_interface
+
+  )
+target_include_directories(runtest
+  PRIVATE
+    include
+    ${PROJECT_SOURCE_DIR}/include/referee_system/
+)
+install(TARGETS 
+runtest
+DESTINATION lib/${PROJECT_NAME})
+# # # # # # # # # # # # # # # # # # # # # # # # # #
 install(DIRECTORY 
 launch DESTINATION 
 share/${PROJECT_NAME})

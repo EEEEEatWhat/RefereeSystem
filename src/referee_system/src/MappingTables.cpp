@@ -15,10 +15,11 @@
     #include <fstream>
     #include <sstream>
     #include <vector>
+    #include <rclcpp/rclcpp.hpp>
     #include <iomanip>
 //upside is for test 
 namespace RM_referee{
-    TypeMethodsTables::TypeMethodsTables() {
+    TypeMethodsTables::TypeMethodsTables() :exitFlag_(false){
         m_map.clear();
         //TODO：初始化数据包
         m_map.emplace(gamestatuspacket.GetID(),&gamestatuspacket);
@@ -73,7 +74,6 @@ namespace RM_referee{
                     data.erase(data.begin(),data.end()); \
                     data.insert(data.end(), dataStart, dataEnd); \
                     PACKET.m_mutex.unlock(); \
-                    printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size()); \
                     return data; \
                 } else { \
                     data.resize(0); \
@@ -82,58 +82,57 @@ namespace RM_referee{
             } \
 
     std::vector<boost::asio::detail::buffered_stream_storage::byte_type>& TypeMethodsTables::Mapserialize(const uint16_t cmd_id ) {
-    try { // 可能抛出异常的代码
-        /**
-        SERIALIZEPACKET(powerheatdatapacket);
-         * * * * * * * * * * * * * * * * * * * 
-        if(powerheatdatapacket.GetID() == cmd_id) {
-            if(powerheatdatapacket.m_mutex.try_lock()) {
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
-                const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
-                data.resize(powerheatdatapacket.GetDataLength());
-                data.insert(data.end(), dataStart, dataEnd);
-                powerheatdatapacket.m_mutex.unlock();
-                printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
-                return data;
-            } else {
-                data.resize(0);
-                return data;
+        try { // 可能抛出异常的代码
+            /**
+            SERIALIZEPACKET(powerheatdatapacket);
+            * * * * * * * * * * * * * * * * * * * 
+            if(powerheatdatapacket.GetID() == cmd_id) {
+                if(powerheatdatapacket.m_mutex.try_lock()) {
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
+                    data.resize(powerheatdatapacket.GetDataLength());
+                    data.insert(data.end(), dataStart, dataEnd);
+                    powerheatdatapacket.m_mutex.unlock();
+                    printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
+                    return data;
+                } else {
+                    data.resize(0);
+                    return data;
+                }
             }
-        }
-        */
-        SERIALIZEPACKET(gamestatuspacket);
-        SERIALIZEPACKET(gameresulteventpacket);
-        SERIALIZEPACKET(gamerobothppacket);
-        SERIALIZEPACKET(playgroundeventpacket);
-        SERIALIZEPACKET(extsupplyprojectileactionpacket);
-        SERIALIZEPACKET(dartinfopacket);
-        SERIALIZEPACKET(robotpositionpacket);
-        SERIALIZEPACKET(robotstatepacket);
-        SERIALIZEPACKET(refereewarningeventpacket);
-        SERIALIZEPACKET(powerheatdatapacket);
-        SERIALIZEPACKET(robotbuffpacket);
-        SERIALIZEPACKET(airsupportdatapacket);
-        SERIALIZEPACKET(damageeventpacket);
-        SERIALIZEPACKET(shooteventpacket);
-        SERIALIZEPACKET(projectileallowancepacket);
-        SERIALIZEPACKET(robotrfidstatepacket);
-        SERIALIZEPACKET(dartclientcmdpacket);
-        SERIALIZEPACKET(groundrobotpositionpacket);
-        SERIALIZEPACKET(radarmarkdatapacket);
-        SERIALIZEPACKET(sentryinfopacket);
-        SERIALIZEPACKET(customrobotdatapacket);
-        SERIALIZEPACKET(minimapinteractioncommsmessagepacket);
-        SERIALIZEPACKET(keyboardmousemessagepacket);
-        SERIALIZEPACKET(clientminimaprecvpacket);
-        SERIALIZEPACKET(customclientdatapacket);
-        SERIALIZEPACKET(mapdatapacket);
-        SERIALIZEPACKET(custominfopacket);
-        
+            */
+            SERIALIZEPACKET(gamestatuspacket);
+            SERIALIZEPACKET(gameresulteventpacket);
+            SERIALIZEPACKET(gamerobothppacket);
+            SERIALIZEPACKET(playgroundeventpacket);
+            SERIALIZEPACKET(extsupplyprojectileactionpacket);
+            SERIALIZEPACKET(dartinfopacket);
+            SERIALIZEPACKET(robotpositionpacket);
+            SERIALIZEPACKET(robotstatepacket);
+            SERIALIZEPACKET(refereewarningeventpacket);
+            SERIALIZEPACKET(powerheatdatapacket);
+            SERIALIZEPACKET(robotbuffpacket);
+            SERIALIZEPACKET(airsupportdatapacket);
+            SERIALIZEPACKET(damageeventpacket);
+            SERIALIZEPACKET(shooteventpacket);
+            SERIALIZEPACKET(projectileallowancepacket);
+            SERIALIZEPACKET(robotrfidstatepacket);
+            SERIALIZEPACKET(dartclientcmdpacket);
+            SERIALIZEPACKET(groundrobotpositionpacket);
+            SERIALIZEPACKET(radarmarkdatapacket);
+            SERIALIZEPACKET(sentryinfopacket);
+            SERIALIZEPACKET(customrobotdatapacket);
+            SERIALIZEPACKET(minimapinteractioncommsmessagepacket);
+            SERIALIZEPACKET(keyboardmousemessagepacket);
+            SERIALIZEPACKET(clientminimaprecvpacket);
+            SERIALIZEPACKET(customclientdatapacket);
+            SERIALIZEPACKET(mapdatapacket);
+            SERIALIZEPACKET(custominfopacket);
 
-    } catch (const std::system_error& e) {
-        std::cerr << "Caught system_error with code " << e.code()
-                << " meaning " << e.what() << '\n';
-    }
+        } catch (const std::system_error& e) {
+            std::cerr << "Caught system_error with code " << e.code()
+                    << " meaning " << e.what() << '\n';
+        }
         printf("current cmd_id does not exist! error id : 0x%x\n",cmd_id);
         data.resize(0);
         return data;
@@ -151,6 +150,7 @@ namespace RM_referee{
     }
 
     uint16_t TypeMethodsTables::FilledPacketData(void* Pdest ,const uint16_t PdestSize ,void* Pdata , const uint16_t PdataSize , const uint16_t cmd_id ) { 
+        (void)PdestSize;
         // std::lock_guard<std::mutex> lock(m_map_mutex);
         // auto it = m_map.find(cmd_id);
         // if(it!=m_map.end()) {
@@ -160,29 +160,111 @@ namespace RM_referee{
         //     // throw std::out_of_range("cmd_id not found in map");
         //     return 0;
         // }
+        return cmd_id;
     }
 
     /** 
-     * TODO:
-     * 数据处理逻辑
-     * 0.第一字节默认0xA5
-     * 1.接受长度小于头长度则等待数据再处理
-     * 3.CRC校验
-     *  清除处理过数据包，开始数据端处理
-     * 0.检查buffer剩余数据长度
-     * 1.正常则处理，缺少则等待数据再处理
-     * 2.CRC16校验
-     * 3.调用Factory.Solve()
+     * 使用状态机
+     * ALL:遍历每一个字节,
+     * WAITING: 遇到0xA5开辟代处理队列存取字节到代处理队列进入 PROCESSINGHEAD
+     * PROCESSINGHEAD: 连续存取字节到代处理队列,代处理队列长度等于头长度则进行crc8,成功则进入 PROCESSINGPACKET 失败清空代处理队列进入 WAITING
+     * PROCESSINGPACKET: 连续存取字节到代处理队列,代处理队列长度等于头长度+2字节(cmd_id)+头包中解析的数据+2字节(crc16)长度则进行crc16,成功则唤醒线程进行数据包处理,并进入 WAITING,失败清空代处理队列进入 WAITING
     */
-    void TypeMethodsTables::SerialReadAsync(boost::asio::serial_port& serialPort,std::vector<uint8_t>& buffer) {
-        boost::asio::async_read(serialPort, boost::asio::buffer(buffer), boost::asio::transfer_exactly(sizeof(RM_referee::PacketHeader)),
-            [&, header = RM_referee::PacketHeader()](const boost::system::error_code& ec, std::size_t bytes_transferred) mutable {
-                if (!ec) {
-                    
+    void TypeMethodsTables::ProcessData()
+    {
+        enum ProcessState { 
+            WAITING,
+            PROCESSINGHEAD,
+            PROCESSINGPACKET
+        };
+        union Cmd_ID {
+            uint16_t cmd_id;
+            uint8_t data[2];
+        };
+
+        
+        ProcessState state = WAITING;
+        uint8_t current_byte;
+        std::vector<uint8_t>* processingArry;
+        uint16_t current_data_length;
+        Cmd_ID cmd_id;
+        while (!exitFlag_)
+        {
+            std::unique_lock<std::mutex> lock(dataQueue_mutex);
+            condVar_.wait(lock, [this]() { return !dataQueue_.empty(); });
+            current_byte = *dataQueue_.front().data();
+            dataQueue_.pop();
+            RCLCPP_WARN(rclcpp::get_logger("TEST"), "%X ",current_byte);
+            lock.unlock();
+            if(state == WAITING) {
+                if(current_byte == RM_referee::StartOfFrame) {
+                    state = PROCESSINGHEAD;
+                    processingArry = new std::vector<uint8_t>();
                 }
             }
-            
-        );
+            if(state == PROCESSINGHEAD) {
+                if(processingArry->size() < sizeof(RM_referee::PacketHeader)) {
+                    processingArry->push_back((uint8_t)current_byte);
+                } else {
+                    if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&processingArry),sizeof(RM_referee::PacketHeader))) {
+                        state = PROCESSINGPACKET;
+                        current_data_length = ((RM_referee::PacketHeader*)processingArry)->DataLength;
+                    } else {
+                        state = WAITING;
+                        delete processingArry;
+                        processingArry = nullptr;
+                    }
+                }
+            }
+            if(state == PROCESSINGPACKET) {
+                if(processingArry->size() < sizeof(RM_referee::PacketHeader) + 2 + current_data_length + 2) {
+                    processingArry->push_back((uint8_t)current_byte);
+                    if(processingArry->size() == processingArry->size() + 1) {
+                        cmd_id.data[0] = (uint8_t)current_byte;
+                    }
+                    if(processingArry->size() == processingArry->size() + 2) {
+                        cmd_id.data[1] = (uint8_t)current_byte;
+                        RCLCPP_WARN(rclcpp::get_logger("TEST"), "cmd_id:0x%x",cmd_id.cmd_id);
+                    }
+                } else {
+                    if(crc16.Verify_CRC16_Check_Sum(reinterpret_cast<uint8_t*>(&processingArry),sizeof(processingArry))) {
+                        //TODO:比较这样操作和额外开辟线程的区别
+                        uint16_t erased = MapSolve(cmd_id.cmd_id,processingArry[sizeof(RM_referee::PacketHeader)+2].data(),current_data_length);
+                        if(erased != cmd_id.cmd_id) {
+                            RCLCPP_WARN(rclcpp::get_logger("TEST"), "erased:0x%x",erased);
+                            throw std::runtime_error("There must be a bug in the code!");
+                        }
+                        state = WAITING;
+                        delete processingArry;
+                        cmd_id.cmd_id = 0;
+                        current_data_length = 0;
+                        processingArry = nullptr;
+                    } else {
+                        state = WAITING;
+                        delete processingArry;
+                        cmd_id.cmd_id = 0;
+                        current_data_length = 0;
+                        processingArry = nullptr;
+                    }
+                }
+            }
+        }
+    }
+
+    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
+        while (!exitFlag_) {
+            boost::system::error_code ec;    
+            std::vector<uint8_t> buffer(4096);  // 适当调整缓冲区大小
+            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);
+            if (!ec) {
+                std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                dataQueue_.push(std::vector<uint8_t>(buffer.begin(), buffer.begin() + len));
+                condVar_.notify_one();
+            }
+            else {
+                // handle error
+            }
+        }
 
     };
 
@@ -190,7 +272,6 @@ namespace RM_referee{
 
 
     int TypeMethodsTables::read() {
-        system("pwd");
         // std::ifstream file("../../../../samples.txt");
         std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
 

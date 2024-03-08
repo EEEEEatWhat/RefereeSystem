@@ -20,27 +20,59 @@ using std::hex;
 
 class RefereeSystem : public rclcpp::Node {
     public:
-        RM_referee::TypeMethodsTables Factory_;
-        std::string serialport;
-        int buffersize;
 
-            RefereeSystem(): Node("RefereeSystem") {
-                GetParam();
-                service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
-                RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
+        RefereeSystem(boost::asio::io_service& ioService): 
+        Node("RefereeSystem") 
+        ,serialPort(ioService)
+        {
+            GetParam();
+            bool success = false;
+            for (const auto& port : serialport_arry) {
+                RCLCPP_WARN(this->get_logger(), "Opened serial port %s", port.c_str());
+                try {
+                    serialPort.open(port);
+                    success = true;
+                    break;
+                } catch (boost::system::system_error& e) {
+                    RCLCPP_WARN(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
+                }
             }
 
-            void GetParam() {
-                this->declare_parameter<std::string>("serialport","/dev/ttyUSB0");
-                this->declare_parameter<int>("buffersize", 4096);
-                this->get_parameter_or("serialport", serialport);
-                this->get_parameter_or("buffersize", buffersize);
-                RCLCPP_WARN(this->get_logger(), "Serialport: %s", serialport.c_str());
-                RCLCPP_WARN(this->get_logger(), "buffersize: %d", buffersize);
+            if (!success) {
+                // throw std::runtime_error("Failed to open any serial port");
+                RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
+            } else {
+                read_thread = std::thread(&RM_referee::TypeMethodsTables::SerialRead, &Factory_, std::ref(serialPort));
+                RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
+                process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
+                RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
             }
-        private:
+
+            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
+            RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
+        }
+
+        ~RefereeSystem() {
+            Factory_.exitFlag_ = true;        
+            if (read_thread.joinable()) {
+                read_thread.join();
+            }
+            if (process_thread.joinable()) {
+                process_thread.join();
+            }
+            RCLCPP_INFO(this->get_logger(), "RefereeSystem has been stopped.");
+        }
+
+        private:    
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
             uint16_t serialize_memcount = 0;
+            RM_referee::TypeMethodsTables Factory_;
+            std::vector<std::string> serialport_arry;
+            boost::asio::serial_port serialPort;
+            std::thread spin_thread;
+            std::thread read_thread;
+            std::thread process_thread;
+
         void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
             serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
             RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
@@ -57,6 +89,20 @@ class RefereeSystem : public rclcpp::Node {
             response->set__data_stream(data);
             response->data_length = serialize_memcount;
         }   
+
+        void spin() {
+            rclcpp::spin(shared_from_this());
+        }
+
+        void GetParam() {
+            this->declare_parameter<int>("buffersize", 4096);
+            this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
+
+            serialport_arry = this->get_parameter("serialport_arry").as_string_array();
+            for (int i=0; i<serialport_arry.size(); i++) {
+                RCLCPP_WARN(rclcpp::get_logger("TEST"), "Serialport: %s", serialport_arry[i].c_str());
+            }
+        }
 };
 
     //TODO:导出子类插件给行为树做解包
@@ -73,13 +119,8 @@ class RefereeSystem : public rclcpp::Node {
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    boost::asio::io_service ioService;
-    auto Prefereesystem = std::make_shared<RefereeSystem>();
-    boost::asio::serial_port serialPort(ioService, Prefereesystem->serialport);
-    std::vector<uint8_t> buffer(Prefereesystem->buffersize);  // 适当调整缓冲区大小
-
-    Prefereesystem->Factory_.SerialReadAsync(serialPort ,buffer);
-    // rclcpp::spin();
+    boost::asio::io_service ioservice_;  
+    rclcpp::spin(std::make_shared<RefereeSystem>(ioservice_));
     rclcpp::shutdown();
     return 0;
 }

@@ -18,7 +18,8 @@ def generate_launch_description():
     )
     t1 =Node(
         package="referee_system",
-        executable="runtest",
+        executable="run_referee_system",
+        parameters=[config_path],
         )
     return LaunchDescription([
         declare_config_path_cmd,

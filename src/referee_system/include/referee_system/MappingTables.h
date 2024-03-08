@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <map>
 #include <mutex>
+#include <queue>
 
 namespace RM_referee {
     using std::hex;
@@ -21,6 +22,10 @@ namespace RM_referee {
         std::vector<boost::asio::detail::buffered_stream_storage::byte_type> data;
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
         std::mutex m_map_mutex;
+        std::queue<std::vector<uint8_t>> dataQueue_;
+        std::mutex dataQueue_mutex;
+        std::condition_variable condVar_;
+
         CRC8 crc8;
         CRC16 crc16;
 
@@ -58,6 +63,8 @@ namespace RM_referee {
         std::vector<boost::asio::detail::buffered_stream_storage::byte_type>::iterator it;
 
     public:
+        std::atomic<bool> exitFlag_;
+
         /**
          * @brief 构造函数将所有类与id绑定
         */
@@ -80,8 +87,22 @@ namespace RM_referee {
             m_map.emplace(cmd_id, std::make_shared<Type>());
         }
 
-        void SerialReadAsync(boost::asio::serial_port& ,std::vector<uint8_t>& );
-        
+        /**
+         * @brief  从串口读取数据
+         * @param  serial_port 端口号
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void SerialRead(boost::asio::serial_port& serialPort) ;        
+
+        /**
+         * @brief  处理数据
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void ProcessData();
+
+
         /**
          * @brief  通过map键值对解包并存储到类内的结构体中
         * @param   cmd_id 键
