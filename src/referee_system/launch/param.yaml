@@ -2,10 +2,10 @@
   ros__parameters:
     buffersize: 4096
     serialport_arry:
-    - ttyACM0
-    - ttyUSB0
-    - ttyUSB1
-    - ttyUSB2
-    - ttyACM1
-    - ttyACM2
+    - /dev/ttyUSB0
+    - /dev/ttyUSB1
+    - /dev/ttyUSB2
+    # - /dev/ttyACM0
+    # - /dev/ttyACM1
+    # - /dev/ttyACM2
     use_sim_time: false

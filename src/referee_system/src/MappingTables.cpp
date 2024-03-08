@@ -192,9 +192,8 @@ namespace RM_referee{
         {
             std::unique_lock<std::mutex> lock(dataQueue_mutex);
             condVar_.wait(lock, [this]() { return !dataQueue_.empty(); });
-            current_byte = *dataQueue_.front().data();
-            dataQueue_.pop();
-            RCLCPP_WARN(rclcpp::get_logger("TEST"), "%X ",current_byte);
+            current_byte = dataQueue_.front();
+            dataQueue_.erase(dataQueue_.begin());
             lock.unlock();
             if(state == WAITING) {
                 if(current_byte == RM_referee::StartOfFrame) {
@@ -204,12 +203,14 @@ namespace RM_referee{
             }
             if(state == PROCESSINGHEAD) {
                 if(processingArry->size() < sizeof(RM_referee::PacketHeader)) {
-                    processingArry->push_back((uint8_t)current_byte);
+                    processingArry->push_back(current_byte);
                 } else {
-                    if(crc8.Verify_CRC8_Check_Sum(reinterpret_cast<uint8_t*>(&processingArry),sizeof(RM_referee::PacketHeader))) {
+                    if(crc8.Verify_CRC8_Check_Sum(processingArry->data(),processingArry->size())) {
                         state = PROCESSINGPACKET;
-                        current_data_length = ((RM_referee::PacketHeader*)processingArry)->DataLength;
+                        current_data_length = ((RM_referee::PacketHeader*)processingArry->data())->DataLength;
+                        // RCLCPP_WARN(rclcpp::get_logger("Process"), "DataLength : %d",current_data_length);
                     } else {
+                        RCLCPP_WARN(rclcpp::get_logger("Process"), "CRC8 check error!");
                         state = WAITING;
                         delete processingArry;
                         processingArry = nullptr;
@@ -218,21 +219,21 @@ namespace RM_referee{
             }
             if(state == PROCESSINGPACKET) {
                 if(processingArry->size() < sizeof(RM_referee::PacketHeader) + 2 + current_data_length + 2) {
-                    processingArry->push_back((uint8_t)current_byte);
-                    if(processingArry->size() == processingArry->size() + 1) {
-                        cmd_id.data[0] = (uint8_t)current_byte;
+                    processingArry->push_back(current_byte);
+                    if(processingArry->size() == sizeof(RM_referee::PacketHeader) + 1) {
+                        cmd_id.data[0] = current_byte;
                     }
-                    if(processingArry->size() == processingArry->size() + 2) {
-                        cmd_id.data[1] = (uint8_t)current_byte;
-                        RCLCPP_WARN(rclcpp::get_logger("TEST"), "cmd_id:0x%x",cmd_id.cmd_id);
+                    if(processingArry->size() == sizeof(RM_referee::PacketHeader) + 2) {
+                        cmd_id.data[1] = current_byte;
+                        // RCLCPP_WARN(rclcpp::get_logger("TEST"), "cmd_id:%#x",cmd_id.cmd_id);
                     }
                 } else {
-                    if(crc16.Verify_CRC16_Check_Sum(reinterpret_cast<uint8_t*>(&processingArry),sizeof(processingArry))) {
+                    if(crc16.Verify_CRC16_Check_Sum(processingArry->data(),processingArry->size())) {
                         //TODO:比较这样操作和额外开辟线程的区别
-                        uint16_t erased = MapSolve(cmd_id.cmd_id,processingArry[sizeof(RM_referee::PacketHeader)+2].data(),current_data_length);
-                        if(erased != cmd_id.cmd_id) {
-                            RCLCPP_WARN(rclcpp::get_logger("TEST"), "erased:0x%x",erased);
-                            throw std::runtime_error("There must be a bug in the code!");
+                        uint16_t processed = MapSolve(cmd_id.cmd_id,&processingArry->at(sizeof(RM_referee::PacketHeader)+2),current_data_length);
+                        if(processed != current_data_length) {
+                            RCLCPP_WARN(rclcpp::get_logger("TEST"), "cmd_id:%#x current_length:%d processed_length:%d",cmd_id.cmd_id,current_data_length,processed);
+                            // throw std::runtime_error("There must be a bug in the code!");
                         }
                         state = WAITING;
                         delete processingArry;
@@ -240,6 +241,7 @@ namespace RM_referee{
                         current_data_length = 0;
                         processingArry = nullptr;
                     } else {
+                        RCLCPP_WARN(rclcpp::get_logger("Process"), "CRC16 check error!");
                         state = WAITING;
                         delete processingArry;
                         cmd_id.cmd_id = 0;
@@ -254,11 +256,11 @@ namespace RM_referee{
     void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
         while (!exitFlag_) {
             boost::system::error_code ec;    
-            std::vector<uint8_t> buffer(4096);  // 适当调整缓冲区大小
+            std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
             std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);
             if (!ec) {
                 std::lock_guard<std::mutex> lock(dataQueue_mutex);
-                dataQueue_.push(std::vector<uint8_t>(buffer.begin(), buffer.begin() + len));
+                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
                 condVar_.notify_one();
             }
             else {

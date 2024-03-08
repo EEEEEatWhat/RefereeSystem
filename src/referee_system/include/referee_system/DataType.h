@@ -157,13 +157,17 @@ namespace RM_referee{
     #pragma pack(push, 1)
     struct RobotStateStruct{ 
         uint8_t robot_id; 
-        uint16_t current_exp; 
-        uint16_t current_HP; 
+        uint8_t robot_level; 
+        uint16_t current_HP;   
+        uint16_t maximum_HP; 
+        uint16_t shooter_barrel_cooling_value; 
+        uint16_t shooter_barrel_heat_limit; 
+        uint16_t chassis_power_limit;  
         uint8_t power_management_gimbal_output : 1; 
         uint8_t power_management_chassis_output : 1; 
         uint8_t power_management_shooter_output : 1; }; 
     #pragma pack(pop)
-    static_assert(sizeof(RobotStateStruct) == 6 , "RobotStateStruct must be 3 bytes long with packing");
+    static_assert(sizeof(RobotStateStruct) == 13 , "RobotStateStruct must be 3 bytes long with packing");
     GENERATEPACK(RobotState,RobotStateStruct)
 
     //0x0202 PowerHeatDataPacket 16 PowerHeatData

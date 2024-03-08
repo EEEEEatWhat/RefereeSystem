@@ -28,9 +28,14 @@ class RefereeSystem : public rclcpp::Node {
             GetParam();
             bool success = false;
             for (const auto& port : serialport_arry) {
-                RCLCPP_WARN(this->get_logger(), "Opened serial port %s", port.c_str());
                 try {
+                    RCLCPP_WARN(this->get_logger(), "Opened serial port %s", port.c_str());
                     serialPort.open(port);
+                    serialPort.set_option(boost::asio::serial_port::baud_rate(115200));
+                    serialPort.set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
+                    serialPort.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
+                    serialPort.set_option(boost::asio::serial_port::character_size(8));
+
                     success = true;
                     break;
                 } catch (boost::system::system_error& e) {
@@ -60,6 +65,7 @@ class RefereeSystem : public rclcpp::Node {
             if (process_thread.joinable()) {
                 process_thread.join();
             }
+            serialPort.close();
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been stopped.");
         }
 

@@ -22,7 +22,7 @@ namespace RM_referee {
         std::vector<boost::asio::detail::buffered_stream_storage::byte_type> data;
         std::map< uint16_t, std::shared_ptr<RefereePacket>> m_map;
         std::mutex m_map_mutex;
-        std::queue<std::vector<uint8_t>> dataQueue_;
+        std::vector<uint8_t> dataQueue_;
         std::mutex dataQueue_mutex;
         std::condition_variable condVar_;
 
