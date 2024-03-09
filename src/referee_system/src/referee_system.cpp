@@ -39,7 +39,7 @@ class RefereeSystem : public rclcpp::Node {
                     success = true;
                     break;
                 } catch (boost::system::system_error& e) {
-                    RCLCPP_WARN(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
+                    RCLCPP_ERROR(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
                 }
             }
 
@@ -105,8 +105,8 @@ class RefereeSystem : public rclcpp::Node {
             this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
 
             serialport_arry = this->get_parameter("serialport_arry").as_string_array();
-            for (int i=0; i<serialport_arry.size(); i++) {
-                RCLCPP_WARN(rclcpp::get_logger("TEST"), "Serialport: %s", serialport_arry[i].c_str());
+            for (const auto& port : serialport_arry) {
+                RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());
             }
         }
 };

@@ -89,7 +89,7 @@ namespace RM_referee{
         uint8_t game_type : 4; 
         uint8_t game_progress : 4; 
         uint16_t stage_remain_time; 
-        uint64_t SyncTimeStamp; }; 
+        uint64_t SyncTimeStamp;  }; 
     #pragma pack(pop)
     static_assert(sizeof(GameStatusStruct) == 11, "GameStatusStruct must be 11 bytes long with packing");
     GENERATEPACK(GameStatus,GameStatusStruct)
@@ -147,10 +147,12 @@ namespace RM_referee{
     GENERATEPACK(RefereeWarningEvent,RefereeWarningEventStruct)
     
     //0x0105 DartInfoPacket 2 DartInfo
+    #pragma pack(push, 1)
     struct DartInfoPacketStruct { 
         uint8_t dart_remaining_time; 
-        uint8_t dart_aim_state; };
-    static_assert(sizeof(DartInfoPacketStruct) == 2, "DartInfoPacketStruct must be 3 bytes long with packing");
+        uint16_t dart_info; };
+    #pragma pack(pop)
+    static_assert(sizeof(DartInfoPacketStruct) == 3, "DartInfoPacketStruct must be 3 bytes long with packing");
     GENERATEPACK(DartInfo,DartInfoPacketStruct)
 
     //0x0201 RobotStatePacket 6 RobotState
@@ -162,10 +164,10 @@ namespace RM_referee{
         uint16_t maximum_HP; 
         uint16_t shooter_barrel_cooling_value; 
         uint16_t shooter_barrel_heat_limit; 
-        uint16_t chassis_power_limit;  
+        uint16_t chassis_power_limit;   
         uint8_t power_management_gimbal_output : 1; 
-        uint8_t power_management_chassis_output : 1; 
-        uint8_t power_management_shooter_output : 1; }; 
+        uint8_t power_management_chassis_output : 1;   
+        uint8_t power_management_shooter_output : 1;  }; 
     #pragma pack(pop)
     static_assert(sizeof(RobotStateStruct) == 13 , "RobotStateStruct must be 3 bytes long with packing");
     GENERATEPACK(RobotState,RobotStateStruct)
@@ -178,7 +180,7 @@ namespace RM_referee{
         uint16_t buffer_energy; 
         uint16_t shooter_17mm_1_barrel_heat; 
         uint16_t shooter_17mm_2_barrel_heat; 
-        uint16_t shooter_42mm_barrel_heat; }; 
+        uint16_t shooter_42mm_barrel_heat;}; 
     static_assert(sizeof(PowerHeatDataStruct) == 16, "PowerHeatDataStruct must be 16 bytes long with packing");
     GENERATEPACK(PowerHeatData,PowerHeatDataStruct)
 
@@ -196,9 +198,10 @@ namespace RM_referee{
         uint8_t recovery_buff;   
         uint8_t cooling_buff;   
         uint8_t defence_buff;   
+        uint8_t vulnerability_buff; 
         uint16_t attack_buff; }; 
     #pragma pack(pop)
-    static_assert(sizeof(RobotBuffStruct) == 5, "RobotBuffStruct must be 16 bytes long with packing");
+    static_assert(sizeof(RobotBuffStruct) == 6, "RobotBuffStruct must be 16 bytes long with packing");
     GENERATEPACK(RobotBuff,RobotBuffStruct)
 
     //0x0205 AirSupportDataPacket 2 AirSupportData
@@ -209,9 +212,11 @@ namespace RM_referee{
     GENERATEPACK(AirSupportData,AirSupportDataStruct)
 
     //0x0206 DamageEventPacket 1 DamageEvent
+    #pragma pack(push, 1)
     struct DamageEventStruct { 
         uint8_t armor_id : 4; 
         uint8_t HP_deduction_reason : 4;};
+    #pragma pack(pop)
     static_assert(sizeof(DamageEventStruct) == 1, "DamageEventStruct must be 16 bytes long with packing");
     GENERATEPACK(DamageEvent,DamageEventStruct)
 
