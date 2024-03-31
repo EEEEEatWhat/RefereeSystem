@@ -166,9 +166,24 @@ namespace RM_referee{
     /** 
      * 使用状态机
      * ALL:遍历每一个字节,
-     * WAITING: 遇到0xA5开辟代处理队列存取字节到代处理队列进入 PROCESSINGHEAD
-     * PROCESSINGHEAD: 连续存取字节到代处理队列,代处理队列长度等于头长度则进行crc8,成功则进入 PROCESSINGPACKET 失败清空代处理队列进入 WAITING
-     * PROCESSINGPACKET: 连续存取字节到代处理队列,代处理队列长度等于头长度+2字节(cmd_id)+头包中解析的数据+2字节(crc16)长度则进行crc16,成功则唤醒线程进行数据包处理,并进入 WAITING,失败清空代处理队列进入 WAITING
+     * WAITING: 遇到0xA5开辟待处理队列存取字节到待处理队列进入 PROCESSINGHEAD
+     * PROCESSINGHEAD: 连续存取字节到待处理队列,待处理队列长度等于头长度则进行crc8,成功则进入 PROCESSINGPACKET 失败清空待处理队列进入 WAITING
+     * PROCESSINGPACKET: 连续存取字节到待处理队列,待处理队列长度等于头长度+2字节(cmd_id)+头包中解析的数据+2字节(crc16)长度则进行crc16,成功则唤醒线程进行数据包处理,并进入 WAITING,失败清空待处理队列进入 WAITING\
+     * BUG: 有时候会出现crc8错误，但是却略过了正确的数据包的部分，crc8错误不代表crc校验的内容全部都是错误的
+    */
+
+    /** 
+     * 使用状态机
+     * ALL:通过偏移指针（此时偏移数等于零）遍历字节，无效则弹出第一个字节
+     * WAITING: 遇到0xA5，开辟待处理队列存取字节到待处理队列，偏移字节数开始增加，进入 PROCESSINGHEAD
+     * PROCESSINGHEAD:  连续存取字节到待处理队列,待处理队列长度等于头长度（偏移字节数等于头长度）则进行crc8,
+     *                  成功则进入 PROCESSINGPACKET 
+     *                  失败偏移字节归零弹出第一个字节，清空待处理队列进入 WAITING
+     *                  （即避免错误的0xA5后面紧跟着下一个正确的0xA5）
+     * PROCESSINGPACKET:连续存取字节到待处理队列,待处理队列长度等于头长度+2字节(cmd_id)+头包中解析的数据+2字节(crc16)长度（偏移字节数相同）则进行crc16,
+     *                  成功则唤醒线程进行数据包处理,并进入 WAITING,
+     *                  失败偏移字节归零弹出第一个字节，清空待处理队列进入 WAITING
+     * TODO: crc16错误可否认为这只是数据包传输错误，不是部分错误字节导致的，认为整个数据包内容都是错误的，不会包含正确的数据包片段？
     */
     void TypeMethodsTables::ProcessData()
     {
@@ -184,7 +199,7 @@ namespace RM_referee{
 
         
         ProcessState state = WAITING;
-        uint8_t current_byte;
+        uint8_t current_byte , offset_bytes = 0;
         std::vector<uint8_t>* processingArry;
         uint16_t current_data_length;
         Cmd_ID cmd_id;
@@ -252,7 +267,9 @@ namespace RM_referee{
             }
         }
     }
-
+    /**
+     * @note 做必要的日志文件记录和输出 
+    */
     void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
         while (!exitFlag_) {
             boost::system::error_code ec;    
