@@ -199,21 +199,26 @@ namespace RM_referee{
 
         
         ProcessState state = WAITING;
-        uint8_t current_byte , offset_bytes = 0;
+        uint8_t current_byte ;
+        uint16_t offset_bytes = 0 , start_bytes = 0;
         std::vector<uint8_t>* processingArry;
         uint16_t current_data_length = 0;
         Cmd_ID cmd_id;
         while (!exitFlag_)
         {
             std::unique_lock<std::mutex> lock(dataQueue_mutex);
-            condVar_.wait(lock, [this]() { return !dataQueue_.empty(); });
-            current_byte = dataQueue_.front() + offset_bytes;
+            condVar_.wait(lock, [this,&offset_bytes]() { return /*!dataQueue_.empty() &&*/ dataQueue_.size() > offset_bytes+1; });//BUG!
+            current_byte = *(dataQueue_.begin() + offset_bytes);
             lock.unlock();
+            // RCLCPP_INFO(rclcpp::get_logger("process"),"%#x,%d",current_byte,offset_bytes);
             if(state == WAITING) {
                 if(current_byte == RM_referee::StartOfFrame) { 
-                    //检测到帧头切换状态
+                    //检测到帧头切换状态,记录帧头字节位置
+                    start_bytes = offset_bytes ;
                     state = PROCESSINGHEAD;
                     processingArry = new std::vector<uint8_t>();
+                } else { 
+                    offset_bytes++;
                 }
             }
             if(state == PROCESSINGHEAD) {
@@ -234,7 +239,8 @@ namespace RM_referee{
                         delete processingArry;
                         processingArry = nullptr;
                         offset_bytes = 0;
-                        dataQueue_.erase(dataQueue_.begin());
+                        std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                        dataQueue_.erase(dataQueue_.begin(),dataQueue_.begin()+start_bytes+1);
                     }
                 }
             }
@@ -264,6 +270,7 @@ namespace RM_referee{
                         cmd_id.cmd_id = 0;
                         current_data_length = 0;
                         processingArry = nullptr;
+                        std::lock_guard<std::mutex> lock(dataQueue_mutex);
                         dataQueue_.erase(dataQueue_.begin(), dataQueue_.begin() + offset_bytes);
                         offset_bytes = 0;
                     } else {
@@ -275,7 +282,8 @@ namespace RM_referee{
                         current_data_length = 0;
                         processingArry = nullptr;
                         offset_bytes = 0;
-                        dataQueue_.erase(dataQueue_.begin());
+                        std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                        dataQueue_.erase(dataQueue_.begin(),dataQueue_.begin()+start_bytes+1);
                     }
                 }
             }
@@ -289,7 +297,8 @@ namespace RM_referee{
         while (!exitFlag_) {
             boost::system::error_code ec;    
             std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
-            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);
+            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);        
+            // RCLCPP_INFO(rclcpp::get_logger("receive"),"%#x",buffer.front());
             if (!ec) {
                 std::lock_guard<std::mutex> lock(dataQueue_mutex);
                 dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
@@ -303,7 +312,24 @@ namespace RM_referee{
         }
 
     };
+    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
 
+        while (!exitFlag_) {
+            boost::system::error_code ec;    
+            std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
+            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);        
+            // RCLCPP_INFO(rclcpp::get_logger("receive"),"%#x",buffer.front());
+            if (!ec) {
+                std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
+                condVar_.notify_one();
+            }
+            else {
+                // handle error
+            }
+        }
+
+    };
 
 
 

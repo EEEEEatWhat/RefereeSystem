@@ -10,4 +10,4 @@
     # - /dev/ttyACM2
     use_sim_time: false
     file_output: true
-    file_output_path: /home/suzuki/RefereeSystem/
+    file_output_path: /home/eatwhat/Desktop/RefereeSystem/dump/

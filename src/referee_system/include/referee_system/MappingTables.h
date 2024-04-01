@@ -94,6 +94,9 @@ namespace RM_referee {
          * @warning 该函数需要单独线程调用
         */
         void SerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;          
+        
+        void SerialRead(boost::asio::serial_port& serialPort ) ;          
+
 
         /**
          * @brief  处理数据
