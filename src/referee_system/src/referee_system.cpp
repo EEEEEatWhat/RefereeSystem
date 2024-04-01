@@ -74,16 +74,27 @@ class RefereeSystem : public rclcpp::Node {
                 // throw std::runtime_error("Failed to open any serial port");
                 RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
             } else {
-                read_thread = std::thread(&RM_referee::TypeMethodsTables::SerialRead, &Factory_, std::ref(serialPort) ,file);
+                //WTF？ Is this CPP ? ? ? 
+                //(线程类接受类的重载成员函数)-suzukisuncy
+                if(en_file_output) {
+                    read_thread = std::thread(
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                        &Factory_, 
+                                        std::ref(serialPort) ,
+                                        file
+                                    );
+                } else {
+                    read_thread = std::thread(
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                        &Factory_, 
+                                        std::ref(serialPort) 
+                                    );
+                }
+
                 RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
                 process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
             }
-
-            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
-            RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
-
-        }
 
         ~RefereeSystem() {
             Factory_.exitFlag_ = true;        

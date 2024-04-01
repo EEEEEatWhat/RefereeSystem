@@ -95,6 +95,9 @@ namespace RM_referee {
         */
         void SerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;        
 
+        void SerialRead(boost::asio::serial_port& serialPort ) ;          
+
+
         /**
          * @brief  处理数据
          * @return void
