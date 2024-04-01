@@ -72,32 +72,34 @@ int main(int argc, char *argv[])
     int i = 1 ; 
     while (i++) {
         for (const auto& packetType : allPacketTypes) {
+            auto now = std::chrono::system_clock::now();
             uint16_t cmd_id = (uint16_t)packetType;
             auto response = client->send_request(cmd_id);
             RCLCPP_INFO(client->get_logger(),"发送请求:0x%x",cmd_id);
             // 处理响应
             if (rclcpp::spin_until_future_complete(client,response) == rclcpp::FutureReturnCode::SUCCESS) {
-                RCLCPP_INFO(client->get_logger(),"请求正常处理");
                 auto result = response.get();
                 if(result->data_stream.size() != 0) {
-                    RCLCPP_INFO(client->get_logger(),"cmd_id:0x%x,data_length:%d",result->cmd_id,result->data_stream.size());
+                    // RCLCPP_INFO(client->get_logger(),"cmd_id:0x%x,data_length:%d",result->cmd_id,result->data_stream.size());
                     if(result->cmd_id == 0x202) {
                         RM_referee::PowerHeatDataStruct T;
                         std::memcpy(&T,result->data_stream.data(),result->data_length);
-                        RCLCPP_INFO(client->get_logger(),"chassis电压(mV):%d",T.chassis_voltage);
-                        RCLCPP_INFO(client->get_logger(),"chassis电流(mA):%d",T.chassis_current);
-                        RCLCPP_INFO(client->get_logger(),"底盘功率(W):%lf",T.chassis_power);
-                        RCLCPP_INFO(client->get_logger(),"缓冲能量(J):%d",T.buffer_energy);
-                        RCLCPP_INFO(client->get_logger(),"第1个17mm枪口热量:%d",T.shooter_17mm_1_barrel_heat);
-                        RCLCPP_INFO(client->get_logger(),"第2个17mm枪口热量:%d",T.shooter_17mm_2_barrel_heat);
-                        RCLCPP_INFO(client->get_logger(),"42mm枪口热量:%d",T.shooter_42mm_barrel_heat);
+                        // RCLCPP_INFO(client->get_logger(),"chassis电压(mV):%d",T.chassis_voltage);
+                        // RCLCPP_INFO(client->get_logger(),"chassis电流(mA):%d",T.chassis_current);
+                        // RCLCPP_INFO(client->get_logger(),"底盘功率(W):%lf",T.chassis_power);
+                        // RCLCPP_INFO(client->get_logger(),"缓冲能量(J):%d",T.buffer_energy);
+                        // RCLCPP_INFO(client->get_logger(),"第1个17mm枪口热量:%d",T.shooter_17mm_1_barrel_heat);
+                        // RCLCPP_INFO(client->get_logger(),"第2个17mm枪口热量:%d",T.shooter_17mm_2_barrel_heat);
+                        // RCLCPP_INFO(client->get_logger(),"42mm枪口热量:%d",T.shooter_42mm_barrel_heat);
                     }
                     
                 } 
             } else {
                 RCLCPP_INFO(client->get_logger(),"请求异常");
             }
-            sleep(0.8);
+            // auto duration =std::chrono::system_clock::now()- now.time_since_epoch();
+            // auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+            // RCLCPP_INFO(client->get_logger(),"单次请求时间： %dms",millis);
         }
     }
     rclcpp::shutdown();

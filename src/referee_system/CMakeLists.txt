@@ -14,6 +14,7 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(my_msg_interface REQUIRED)
+find_package(nav2_msgs REQUIRED)
 
 add_executable(run_referee_system 
   # src/test.cpp 
@@ -29,6 +30,7 @@ ament_target_dependencies(
   std_msgs
   geometry_msgs
   my_msg_interface
+  nav2_msgs
 
   )
 target_include_directories(run_referee_system

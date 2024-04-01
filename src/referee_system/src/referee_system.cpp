@@ -11,11 +11,14 @@
 #include <std_msgs/msg/string.hpp>
 #include <fstream>
 #include <ostream>
+#include <std_msgs/msg/float32.hpp>
+#include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <thread>   
 
 #include "DataType.h"
 #include "MappingTables.h"
 #include "my_msg_interface/srv/referee_msg.hpp"
+#include "my_msg_interface/msg/power_heat.hpp"
 
 using std::hex;
 
@@ -81,6 +84,9 @@ class RefereeSystem : public rclcpp::Node {
             }
 
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
+            // client = this->create_client<nav2_msgs::action::NavigateToPose>("navigate_to_pose");
+            power_heat_pub = this->create_publisher<my_msg_interface::msg::PowerHeat>("PowerHeat",rclcpp::SystemDefaultsQoS());
+            timer = this->create_wall_timer(std::chrono::milliseconds(20),std::bind(&RefereeSystem::Callback,this));
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
 
         }
@@ -103,6 +109,9 @@ class RefereeSystem : public rclcpp::Node {
 
         private:    
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
+            // rclcpp::Client<nav2_msgs::action::NavigateToPose>::SharedPtr client;
+            rclcpp::Publisher<my_msg_interface::msg::PowerHeat>::SharedPtr power_heat_pub ;
+            rclcpp::TimerBase::SharedPtr timer;
             uint16_t serialize_memcount = 0;
             RM_referee::TypeMethodsTables Factory_;
             std::vector<std::string> serialport_arry;
@@ -146,6 +155,39 @@ class RefereeSystem : public rclcpp::Node {
             for (const auto& port : serialport_arry) {
                 RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());
             }
+        }
+        void Callback() {
+            auto data_202 = Factory_.Mapserialize(0x202);
+            
+            RM_referee::PowerHeatDataStruct struct_202;
+            std::memcpy(&struct_202,data_202.data(),data_202.size());
+            
+            //查询频率和发送频率不匹配丢包？
+            auto data_207 = Factory_.Mapserialize(0x207);
+            RM_referee::ShootEventSruct struct_207;
+            std::memcpy(&struct_207,data_207.data(),data_207.size());
+
+            auto data_201 = Factory_.Mapserialize(0x201);
+            RM_referee::RobotStateStruct struct_201;
+            std::memcpy(&struct_201,data_201.data(),data_201.size());
+
+            my_msg_interface::msg::PowerHeat send_data;
+            send_data.buffer_energy = struct_202.buffer_energy;
+            send_data.chassis_power = struct_202.chassis_power;
+            send_data.initial_speed = struct_207.initial_speed;
+            send_data.launching_frequency = struct_207.launching_frequency;
+            send_data.shooter_17mm_1_barrel_heat = struct_202.shooter_17mm_1_barrel_heat;
+            send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
+            power_heat_pub->publish(send_data);
+            bool can_cancel_flag = 1 ;
+            if(can_cancel_flag && struct_201.current_HP < 300) {    //最低血量->参数服务器
+                //发送cancel
+                
+                can_cancel_flag = 0;
+            } else if( !can_cancel_flag && struct_201.current_HP < 300) {
+                can_cancel_flag = 1;
+            }
+
         }
 };
 
