@@ -9,3 +9,5 @@
     # - /dev/ttyACM1
     # - /dev/ttyACM2
     use_sim_time: false
+    file_output: false
+    file_output_path: /home/suzuki/RefereeSystem/

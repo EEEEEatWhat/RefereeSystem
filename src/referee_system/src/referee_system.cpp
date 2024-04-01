@@ -9,7 +9,8 @@
 #include <boost/asio.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
-
+#include <fstream>
+#include <ostream>
 #include <thread>   
 
 #include "DataType.h"
@@ -26,6 +27,32 @@ class RefereeSystem : public rclcpp::Node {
         ,serialPort(ioService)
         {
             GetParam();
+            char cwd[1024];
+            if (getcwd(cwd, sizeof(cwd)) != NULL) {
+                RCLCPP_INFO(this->get_logger(), "Current working dir: %s", cwd);
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "Failed to get current working directory");
+            }
+            if(en_file_output){
+                // 创建一个带有时间戳的文件名
+                auto now = std::chrono::system_clock::now();
+                std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+                std::tm* now_tm = std::localtime(&now_c);
+                char time_str[100];
+                std::strftime(time_str, sizeof(time_str), "%Y%m%d%H%M%S", now_tm);
+                std::ostringstream filename;
+                filename << file_path << "serialPortdump_" << time_str << ".txt";
+
+                file = new std::ofstream(filename.str(), std::ios::binary);
+                if (!*file) {
+                    RCLCPP_ERROR(this->get_logger(), "Failed to open the output file.");
+                    return;
+                } else {
+                    RCLCPP_INFO(this->get_logger(), "Output file opened: %s", filename.str().c_str());
+                }
+            }
+
+            //打开串口列表中的串口
             bool success = false;
             for (const auto& port : serialport_arry) {
                 try {
@@ -42,12 +69,12 @@ class RefereeSystem : public rclcpp::Node {
                     RCLCPP_ERROR(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
                 }
             }
-
+            //开辟线程和分配任务
             if (!success) {
                 // throw std::runtime_error("Failed to open any serial port");
                 RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
             } else {
-                read_thread = std::thread(&RM_referee::TypeMethodsTables::SerialRead, &Factory_, std::ref(serialPort));
+                read_thread = std::thread(&RM_referee::TypeMethodsTables::SerialRead, &Factory_, std::ref(serialPort) ,file);
                 RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
                 process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
@@ -55,6 +82,7 @@ class RefereeSystem : public rclcpp::Node {
 
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
+
         }
 
         ~RefereeSystem() {
@@ -66,6 +94,10 @@ class RefereeSystem : public rclcpp::Node {
                 process_thread.join();
             }
             serialPort.close();
+            if (file) {
+                file->close();
+                delete file;
+            }
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been stopped.");
         }
 
@@ -78,7 +110,9 @@ class RefereeSystem : public rclcpp::Node {
             std::thread spin_thread;
             std::thread read_thread;
             std::thread process_thread;
-
+            std::ofstream* file;    
+            bool en_file_output = false;
+            std::string file_path = "log/";
         void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
             serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
             RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
@@ -103,6 +137,10 @@ class RefereeSystem : public rclcpp::Node {
         void GetParam() {
             this->declare_parameter<int>("buffersize", 4096);
             this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
+            this->declare_parameter<bool>("file_output", false);
+            this->declare_parameter<std::string>("file_output_path", "log");
+            file_path = this->get_parameter("file_output_path").as_string();
+            en_file_output = this->get_parameter("file_output").as_bool();
 
             serialport_arry = this->get_parameter("serialport_arry").as_string_array();
             for (const auto& port : serialport_arry) {

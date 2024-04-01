@@ -201,40 +201,48 @@ namespace RM_referee{
         ProcessState state = WAITING;
         uint8_t current_byte , offset_bytes = 0;
         std::vector<uint8_t>* processingArry;
-        uint16_t current_data_length;
+        uint16_t current_data_length = 0;
         Cmd_ID cmd_id;
         while (!exitFlag_)
         {
             std::unique_lock<std::mutex> lock(dataQueue_mutex);
             condVar_.wait(lock, [this]() { return !dataQueue_.empty(); });
-            current_byte = dataQueue_.front();
-            dataQueue_.erase(dataQueue_.begin());
+            current_byte = dataQueue_.front() + offset_bytes;
             lock.unlock();
             if(state == WAITING) {
-                if(current_byte == RM_referee::StartOfFrame) {
+                if(current_byte == RM_referee::StartOfFrame) { 
+                    //检测到帧头切换状态
                     state = PROCESSINGHEAD;
                     processingArry = new std::vector<uint8_t>();
                 }
             }
             if(state == PROCESSINGHEAD) {
                 if(processingArry->size() < sizeof(RM_referee::PacketHeader)) {
+                    //尚未存满头部，偏移自增继续存取
                     processingArry->push_back(current_byte);
+                    offset_bytes++;
                 } else {
                     if(crc8.Verify_CRC8_Check_Sum(processingArry->data(),processingArry->size())) {
+                        //头部校验成功，进入数据包处理状态，获取数据长度
                         state = PROCESSINGPACKET;
                         current_data_length = ((RM_referee::PacketHeader*)processingArry->data())->DataLength;
                         // RCLCPP_WARN(rclcpp::get_logger("Process"), "DataLength : %d",current_data_length);
                     } else {
+                        //头部校验失败，清空待处理队列，偏移字节数归零，移除第一个字节
                         RCLCPP_WARN(rclcpp::get_logger("Process"), "CRC8 check error!");
                         state = WAITING;
                         delete processingArry;
                         processingArry = nullptr;
+                        offset_bytes = 0;
+                        dataQueue_.erase(dataQueue_.begin());
                     }
                 }
             }
             if(state == PROCESSINGPACKET) {
                 if(processingArry->size() < sizeof(RM_referee::PacketHeader) + 2 + current_data_length + 2) {
+                    //尚未存满数据包，继续存取，并尝试获取cmd_id
                     processingArry->push_back(current_byte);
+                    offset_bytes++;
                     if(processingArry->size() == sizeof(RM_referee::PacketHeader) + 1) {
                         cmd_id.data[0] = current_byte;
                     }
@@ -245,6 +253,7 @@ namespace RM_referee{
                 } else {
                     if(crc16.Verify_CRC16_Check_Sum(processingArry->data(),processingArry->size())) {
                         //TODO:比较这样操作和额外开辟线程的区别
+                        //数据包校验成功，唤醒线程进行数据包处理,同时清空待处理队列，偏移字节数归零，移除已经处理的字节
                         uint16_t processed = MapSolve(cmd_id.cmd_id,&processingArry->at(sizeof(RM_referee::PacketHeader)+2),current_data_length);
                         if(processed != current_data_length) {
                             RCLCPP_WARN(rclcpp::get_logger("TEST"), "cmd_id:%#x current_length:%d processed_length:%d",cmd_id.cmd_id,current_data_length,processed);
@@ -255,13 +264,18 @@ namespace RM_referee{
                         cmd_id.cmd_id = 0;
                         current_data_length = 0;
                         processingArry = nullptr;
+                        dataQueue_.erase(dataQueue_.begin(), dataQueue_.begin() + offset_bytes);
+                        offset_bytes = 0;
                     } else {
+                        //数据包校验失败，清空待处理队列，偏移字节数归零，移除第一个字节
                         RCLCPP_WARN(rclcpp::get_logger("Process"), "CRC16 check error!");
                         state = WAITING;
                         delete processingArry;
                         cmd_id.cmd_id = 0;
                         current_data_length = 0;
                         processingArry = nullptr;
+                        offset_bytes = 0;
+                        dataQueue_.erase(dataQueue_.begin());
                     }
                 }
             }
@@ -270,7 +284,8 @@ namespace RM_referee{
     /**
      * @note 做必要的日志文件记录和输出 
     */
-    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
+    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort, std::ofstream* file) {
+
         while (!exitFlag_) {
             boost::system::error_code ec;    
             std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
@@ -279,6 +294,8 @@ namespace RM_referee{
                 std::lock_guard<std::mutex> lock(dataQueue_mutex);
                 dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
                 condVar_.notify_one();
+                file->write(reinterpret_cast<const char*>(buffer.data()), len);  // 将接收到的字节写入文件
+
             }
             else {
                 // handle error
