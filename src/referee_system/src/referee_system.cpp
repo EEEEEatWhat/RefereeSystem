@@ -138,6 +138,7 @@ class RefereeSystem : public rclcpp::Node {
             std::ofstream* file;    
             bool en_file_output = false;
             std::string file_path = "log/";
+            int PacketHeaderSequenceNumber = 0;
 
             void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
                 serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
@@ -205,7 +206,63 @@ class RefereeSystem : public rclcpp::Node {
                     can_cancel_flag = 1;
                 }
             }
+
+            void DecisionSerialWriteCallback() { 
+                #pragma pack(push, 1) 
+                struct decision_serial_write_t {
+                    RM_referee::PacketHeader header;
+                    uint16_t cmd_id;
+                    struct {
+                        uint16_t data_cmd_id; 
+                        uint16_t sender_id; 
+                        uint16_t receiver_id;
+                        struct sentry_cmd_t {
+                            unsigned int confirmRes : 1;            //是否确认复活：Confirm Resurrection
+                            unsigned int confirmInstaRes : 1;       //是否确认兑换立即复活：Confirm Instant Resurrection Exchange
+                            unsigned int pendingMissileExch : 11;   //即将兑换的发弹量：Pending Missile Exchange Quantity
+                            unsigned int remoteMissileReqCount : 4; //远程兑换的发弹的请求次数：Remote Missile Exchange Request Count
+                            unsigned int remoteHealthReqCount : 4;  //远程兑换血量的请求次数：Remote Health Exchange Request Count
+                            unsigned int reserved : 11;             //保留：Reserved
+                        }sentry_cmd;
+                    }robot_interaction_data;
+                    uint16_t frame_tail;
+                }decision_serial_write = {
+                    .header = {
+                        .SOF = 0xA5,
+                        .DataLength = 10,
+                        .SequenceNumber = static_cast<uint8_t>(PacketHeaderSequenceNumber++),
+                        .CRC8 = 0x00,
+                    },
+                    .cmd_id = 0x0301,
+                    .robot_interaction_data = {
+                        .data_cmd_id = 0x0120,  /*sentry_decision*/
+                        .sender_id = 0x0007,    /*red_sentry：0x0007 blue_sentry:0x0107 Get Grom Decision*/
+                        .receiver_id = 0x8080,  /*referee_system:0x8080 */
+                    //     .sentry_cmd = {
+                    //         .confirmRes = msg.data,
+                    //         .confirmInstaRes = msg.data,
+                    //         .pendingMissileExch = msg.data,
+                    //         .remoteMissileReqCount = 0msg.data,
+                    //         .remoteHealthReqCount = msg.data,
+                    //     }
+                    },
+                    .frame_tail = 0x0000
+                };
+                #pragma pack(pop)
+                static_assert(sizeof(decision_serial_write_t) == 19, "decision_serial_write_t size error");
+                decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-2);
+                decision_serial_write.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&decision_serial_write,sizeof(decision_serial_write_t)-2);
+                serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                    if (!error) {
+                        RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
+                        //输出一些重要信息
+                    } else {
+                        RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
+                    }
+                });
+            }
 };
+
 
     //TODO:导出子类插件给行为树做解包
     //TODO:尝试使用模板函数重写
