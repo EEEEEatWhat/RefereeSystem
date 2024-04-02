@@ -293,45 +293,72 @@ namespace RM_referee{
      * @note 做必要的日志文件记录和输出 
     */
     void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort, std::ofstream* file) {
-
+        boost::system::error_code ec;    
+        std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
         while (!exitFlag_) {
-            boost::system::error_code ec;    
-            std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
             std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);        
             // RCLCPP_INFO(rclcpp::get_logger("receive"),"%#x",buffer.front());
             if (!ec) {
                 std::lock_guard<std::mutex> lock(dataQueue_mutex);
-                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
-                condVar_.notify_one();
+                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.begin() + len);
                 file->write(reinterpret_cast<const char*>(buffer.data()), len);  // 将接收到的字节写入文件
-
-            }
-            else {
-                // handle error
-            }
-        }
-
-    };
-    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
-
-        while (!exitFlag_) {
-            boost::system::error_code ec;    
-            std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
-            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);        
-            // RCLCPP_INFO(rclcpp::get_logger("receive"),"%#x",buffer.front());
-            if (!ec) {
-                std::lock_guard<std::mutex> lock(dataQueue_mutex);
-                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
                 condVar_.notify_one();
             }
             else {
                 // handle error
             }
         }
-
     };
 
+    void TypeMethodsTables::SerialRead(boost::asio::serial_port& serialPort) {
+        boost::system::error_code ec;    
+        std::vector<uint8_t> buffer(1);  // 适当调整缓冲区大小
+        while (!exitFlag_) {
+            std::size_t len = serialPort.read_some(boost::asio::buffer(buffer), ec);        
+            // RCLCPP_INFO(rclcpp::get_logger("receive"),"%#x",buffer.front());
+            if (!ec) {
+                std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.begin() + len);
+                condVar_.notify_one();
+            }
+            else {
+                // handle error
+            }
+        }
+    };
 
+    void TypeMethodsTables::AsyncSerialRead(boost::asio::serial_port& serialPort) {
+        std::vector<uint8_t> buffer(16);  
+        while (!exitFlag_) {
+            serialPort.async_read_some(boost::asio::buffer(buffer), [this,&buffer](boost::system::error_code ec, std::size_t len) {
+                if (!ec) {
+                    std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                    dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.begin() + len);
+                    condVar_.notify_one();
+                }
+                else {
+                    // handle error
+                }
+            });
+        }
+    }
+
+    void TypeMethodsTables::AsyncSerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) {
+        std::vector<uint8_t> buffer(16);  
+        while (!exitFlag_) {
+            serialPort.async_read_some(boost::asio::buffer(buffer), [this,&buffer,&file](boost::system::error_code ec, std::size_t len) {
+                if (!ec) {
+                    std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                    dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.begin() + len);
+                    file->write(reinterpret_cast<const char*>(buffer.data()), len);  // 将接收到的字节写入文件
+                    condVar_.notify_one();
+                }
+                else {
+                    // handle error
+                }
+            });
+        }
+    }
 
     int TypeMethodsTables::read() {
         // std::ifstream file("../../../../samples.txt");

@@ -81,14 +81,14 @@ class RefereeSystem : public rclcpp::Node {
                 //(线程类接受类的重载成员函数)-suzukisuncy
                 if(en_file_output) {
                     read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::AsyncSerialRead),
                                         &Factory_, 
                                         std::ref(serialPort) ,
                                         file
                                     );
                 } else {
                     read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::AsyncSerialRead),
                                         &Factory_, 
                                         std::ref(serialPort) 
                                     );
@@ -138,73 +138,73 @@ class RefereeSystem : public rclcpp::Node {
             std::ofstream* file;    
             bool en_file_output = false;
             std::string file_path = "log/";
-        void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
-            serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
-            RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
-            if(serialize_memcount == 0) { //cmd_id不存在
-                RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
-                response->cmd_id = 0x0000;
-                response->data_length = 0;
-                response->data_stream.resize(0);
-                return;
+
+            void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
+                serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
+                RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
+                if(serialize_memcount == 0) { //cmd_id不存在
+                    RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
+                    response->cmd_id = 0x0000;
+                    response->data_length = 0;
+                    response->data_stream.resize(0);
+                    return;
+                }
+                response->cmd_id = request->cmd_id;
+                response->data_stream.resize(serialize_memcount);
+                auto data = Factory_.Mapserialize(request->cmd_id);
+                response->set__data_stream(data);
+                response->data_length = serialize_memcount;
+            }   
+
+            void spin() {
+                rclcpp::spin(shared_from_this());
             }
-            response->cmd_id = request->cmd_id;
-            response->data_stream.resize(serialize_memcount);
-            auto data = Factory_.Mapserialize(request->cmd_id);
-            response->set__data_stream(data);
-            response->data_length = serialize_memcount;
-        }   
 
-        void spin() {
-            rclcpp::spin(shared_from_this());
-        }
+            void GetParam() {
+                this->declare_parameter<int>("buffersize", 4096);
+                this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
+                this->declare_parameter<bool>("file_output", false);
+                this->declare_parameter<std::string>("file_output_path", "log");
+                file_path = this->get_parameter("file_output_path").as_string();
+                en_file_output = this->get_parameter("file_output").as_bool();
 
-        void GetParam() {
-            this->declare_parameter<int>("buffersize", 4096);
-            this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
-            this->declare_parameter<bool>("file_output", false);
-            this->declare_parameter<std::string>("file_output_path", "log");
-            file_path = this->get_parameter("file_output_path").as_string();
-            en_file_output = this->get_parameter("file_output").as_bool();
-
-            serialport_arry = this->get_parameter("serialport_arry").as_string_array();
-            for (const auto& port : serialport_arry) {
-                RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());
+                serialport_arry = this->get_parameter("serialport_arry").as_string_array();
+                for (const auto& port : serialport_arry) {
+                    RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());
+                }
             }
-        }
-        void Callback() {
-            auto data_202 = Factory_.Mapserialize(0x202);
-            
-            RM_referee::PowerHeatDataStruct struct_202;
-            std::memcpy(&struct_202,data_202.data(),data_202.size());
-            
-            //TODO：查询频率和发送频率不匹配丢包？
-            auto data_207 = Factory_.Mapserialize(0x207);
-            RM_referee::ShootEventSruct struct_207;
-            std::memcpy(&struct_207,data_207.data(),data_207.size());
-
-            auto data_201 = Factory_.Mapserialize(0x201);
-            RM_referee::RobotStateStruct struct_201;
-            std::memcpy(&struct_201,data_201.data(),data_201.size());
-
-            my_msg_interface::msg::PowerHeat send_data;
-            send_data.buffer_energy = struct_202.buffer_energy;
-            send_data.chassis_power = struct_202.chassis_power;
-            send_data.initial_speed = struct_207.initial_speed;
-            send_data.launching_frequency = struct_207.launching_frequency;
-            send_data.shooter_17mm_1_barrel_heat = struct_202.shooter_17mm_1_barrel_heat;
-            send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
-            power_heat_pub->publish(send_data);
-            bool can_cancel_flag = 1 ;
-            if(can_cancel_flag && struct_201.current_HP < 300) {    //最低血量->参数服务器
-                //发送cancel
+            void Callback() {
+                auto data_202 = Factory_.Mapserialize(0x202);
                 
-                can_cancel_flag = 0;
-            } else if( !can_cancel_flag && struct_201.current_HP < 300) {
-                can_cancel_flag = 1;
-            }
+                RM_referee::PowerHeatDataStruct struct_202;
+                std::memcpy(&struct_202,data_202.data(),data_202.size());
+                
+                //TODO：查询频率和发送频率不匹配丢包？
+                auto data_207 = Factory_.Mapserialize(0x207);
+                RM_referee::ShootEventSruct struct_207;
+                std::memcpy(&struct_207,data_207.data(),data_207.size());
 
-        }
+                auto data_201 = Factory_.Mapserialize(0x201);
+                RM_referee::RobotStateStruct struct_201;
+                std::memcpy(&struct_201,data_201.data(),data_201.size());
+
+                my_msg_interface::msg::PowerHeat send_data;
+                send_data.buffer_energy = struct_202.buffer_energy;
+                send_data.chassis_power = struct_202.chassis_power;
+                send_data.initial_speed = struct_207.initial_speed;
+                send_data.launching_frequency = struct_207.launching_frequency;
+                send_data.shooter_17mm_1_barrel_heat = struct_202.shooter_17mm_1_barrel_heat;
+                send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
+                power_heat_pub->publish(send_data);
+                bool can_cancel_flag = 1 ;
+                if(can_cancel_flag && struct_201.current_HP < 300) {    //最低血量->参数服务器
+                    //发送cancel
+                    
+                    can_cancel_flag = 0;
+                } else if( !can_cancel_flag && struct_201.current_HP < 300) {
+                    can_cancel_flag = 1;
+                }
+            }
 };
 
     //TODO:导出子类插件给行为树做解包

@@ -88,14 +88,38 @@ namespace RM_referee {
         }
 
         /**
-         * @brief  从串口读取数据
+         * @brief  非异步线程的方式从串口读取数据
          * @param  serial_port 端口号
          * @return void
          * @warning 该函数需要单独线程调用
         */
-        void SerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;          
-        
         void SerialRead(boost::asio::serial_port& serialPort ) ;          
+        
+        /**
+         * @brief  非异步线程的方式从串口读取数据
+         * @param  serial_port 端口号
+         * @param  file 文件指针用于输出字节流
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void SerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;          
+
+        /**
+         * @brief  以异步线程的方式从串口读取数据
+         * @param  serial_port 端口号
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void AsyncSerialRead(boost::asio::serial_port& serialPort ) ;     
+
+        /**
+         * @brief  以异步线程的方式从串口读取数据
+         * @param  serial_port 端口号
+         * @param  file 文件指针用于输出字节流
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void AsyncSerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;          
 
 
         /**
