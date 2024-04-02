@@ -48,7 +48,7 @@ namespace RM_referee {
          * Input: Data to check,Stream length, initialized checksum   
          * Output: CRC checksum   
         */
-        inline uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8) {   
+        inline uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8 = 0xff) {   
             uint8_t ucIndex;   
             while (dwLength--) {   
                 ucIndex = ucCRC8^(*pchMessage++);   
@@ -118,7 +118,7 @@ namespace RM_referee {
              * Input: Data to check,Stream length, initialized checksum   
              * Output: CRC checksum   
             */   
-            inline uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC) {   
+            inline uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC = 0xffff) {   
                 uint8_t chData;   
                 if (pchMessage == NULL) {   
                     return 0xFFFF;   
