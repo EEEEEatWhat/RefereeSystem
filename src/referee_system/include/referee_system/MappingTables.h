@@ -26,8 +26,6 @@ namespace RM_referee {
         std::mutex dataQueue_mutex;
         std::condition_variable condVar_;
 
-        CRC8 crc8;
-        CRC16 crc16;
 
         GameStatusPacket gamestatuspacket ;
         GameResultEventPacket gameresulteventpacket ; 
@@ -64,6 +62,8 @@ namespace RM_referee {
 
     public:
         std::atomic<bool> exitFlag_;
+        CRC8 crc8;
+        CRC16 crc16;
 
         /**
          * @brief 构造函数将所有类与id绑定
