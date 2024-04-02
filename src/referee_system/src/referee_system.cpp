@@ -13,7 +13,9 @@
 #include <ostream>
 #include <std_msgs/msg/float32.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <thread>   
+#include <mutex>
 
 #include "DataType.h"
 #include "MappingTables.h"
@@ -98,10 +100,18 @@ class RefereeSystem : public rclcpp::Node {
                 process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
             }
+            plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
+            RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
 
-            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
+            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize, this, std::placeholders::_1, std::placeholders::_2));
+            RCLCPP_INFO(this->get_logger(), "RequestSerializeService has been started.");
+
             // client = this->create_client<nav2_msgs::action::NavigateToPose>("navigate_to_pose");
+            //RCLCPP_INFO(this->get_logger(), "NavigateToPoseCancelClient has been started.");
+
             power_heat_pub = this->create_publisher<my_msg_interface::msg::PowerHeat>("PowerHeat",rclcpp::SystemDefaultsQoS());
+            RCLCPP_INFO(this->get_logger(), "PowerHeatPub has been started.");
+
             timer = this->create_wall_timer(std::chrono::milliseconds(20),std::bind(&RefereeSystem::Callback,this));
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
 
@@ -124,6 +134,7 @@ class RefereeSystem : public rclcpp::Node {
         }
 
         private:    
+            rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr plan_sub;
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
             // rclcpp::Client<nav2_msgs::action::NavigateToPose>::SharedPtr client;
             rclcpp::Publisher<my_msg_interface::msg::PowerHeat>::SharedPtr power_heat_pub ;
@@ -132,6 +143,7 @@ class RefereeSystem : public rclcpp::Node {
             RM_referee::TypeMethodsTables Factory_;
             std::vector<std::string> serialport_arry;
             boost::asio::serial_port serialPort;
+            std::mutex serial_write_mutex;
             std::thread spin_thread;
             std::thread read_thread;
             std::thread process_thread;
@@ -207,6 +219,23 @@ class RefereeSystem : public rclcpp::Node {
                 }
             }
 
+            void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
+                RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
+                // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
+                std::vector<geometry_msgs::msg::PoseStamped> result; 
+                if (msg->poses.size() > 49) {//降采样到49个点
+                    float step = float(msg->poses.size()) / 49;
+                    for (float i = 0; i < msg->poses.size(); i += step) {
+                        result.push_back(msg->poses[int(i)]);
+                    }
+                } else {
+                    result = msg->poses;
+                }
+
+                std::lock_guard<std::mutex> lock(serial_write_mutex);
+
+            }
+
             void DecisionSerialWriteCallback() { 
                 #pragma pack(push, 1) 
                 struct decision_serial_write_t {
@@ -252,6 +281,7 @@ class RefereeSystem : public rclcpp::Node {
                 static_assert(sizeof(decision_serial_write_t) == 19, "decision_serial_write_t size error");
                 decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-2);
                 decision_serial_write.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&decision_serial_write,sizeof(decision_serial_write_t)-2);
+                std::lock_guard<std::mutex> lock(serial_write_mutex);
                 serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
                     if (!error) {
                         RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
@@ -261,6 +291,10 @@ class RefereeSystem : public rclcpp::Node {
                     }
                 });
             }
+
+// ros2 topic info /plan
+// Type: nav_msgs/msg/Path
+
 };
 
 
