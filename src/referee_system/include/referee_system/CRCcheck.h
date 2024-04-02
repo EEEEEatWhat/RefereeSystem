@@ -27,14 +27,6 @@ namespace RM_referee {
                 0xe9, 0xb7, 0x55, 0x0b, 0x88, 0xd6, 0x34, 0x6a, 0x2b, 0x75, 0x97, 0xc9, 0x4a, 0x14, 0xf6, 0xa8,   
                 0x74, 0x2a, 0xc8, 0x96, 0x15, 0x4b, 0xa9, 0xf7, 0xb6, 0xe8, 0x0a, 0x54, 0xd7, 0x89, 0x6b, 0x35,   
             };
-            inline uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8) {   
-                uint8_t ucIndex;   
-                while (dwLength--) {   
-                    ucIndex = ucCRC8^(*pchMessage++);   
-                    ucCRC8 = CRC8_TAB[ucIndex];   
-                }   
-                return ucCRC8;   
-            }
         public:
             CRC8() {};
             ~CRC8() {};
@@ -51,6 +43,19 @@ namespace RM_referee {
             ucExpected = Get_CRC8_Check_Sum (pchMessage, dwLength-1, CRC8_INIT);   
             return ( ucExpected == pchMessage[dwLength-1] );   
         } 
+        /**   
+         * Descriptions: CRC8 checksum function   
+         * Input: Data to check,Stream length, initialized checksum   
+         * Output: CRC checksum   
+        */
+        inline uint8_t Get_CRC8_Check_Sum(uint8_t *pchMessage,unsigned int dwLength,uint8_t ucCRC8) {   
+            uint8_t ucIndex;   
+            while (dwLength--) {   
+                ucIndex = ucCRC8^(*pchMessage++);   
+                ucCRC8 = CRC8_TAB[ucIndex];   
+            }   
+            return ucCRC8;   
+        }
     };
     
 
@@ -91,22 +96,6 @@ namespace RM_referee {
                 0xf78f, 0xe606, 0xd49d, 0xc514, 0xb1ab, 0xa022, 0x92b9, 0x8330,   
                 0x7bc7, 0x6a4e, 0x58d5, 0x495c, 0x3de3, 0x2c6a, 0x1ef1, 0x0f78 
             };
-            /**   
-             * Descriptions: CRC16 checksum function   
-             * Input: Data to check,Stream length, initialized checksum   
-             * Output: CRC checksum   
-            */   
-            inline uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC) {   
-                uint8_t chData;   
-                if (pchMessage == NULL) {   
-                    return 0xFFFF;   
-                }   
-                while(dwLength--) {   
-                    chData = *pchMessage++; 
-                    wCRC = ((uint16_t)(wCRC) >> 8) ^ wCRC_Table[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];   
-                }   
-                return wCRC;   
-            }
         public:
             CRC16() {};
             ~CRC16() {};
@@ -123,6 +112,22 @@ namespace RM_referee {
                 } 
                 wExpected = Get_CRC16_Check_Sum ( pchMessage, dwLength - 2, CRC_INIT);   
                 return  ((wExpected  &  0xff)  ==  pchMessage[dwLength  -  2]  &&  ((wExpected  >>  8)  &  0xff)  ==  pchMessage[dwLength - 1]);   
+            }
+            /**   
+             * Descriptions: CRC16 checksum function   
+             * Input: Data to check,Stream length, initialized checksum   
+             * Output: CRC checksum   
+            */   
+            inline uint16_t Get_CRC16_Check_Sum(uint8_t *pchMessage,uint32_t dwLength,uint16_t wCRC) {   
+                uint8_t chData;   
+                if (pchMessage == NULL) {   
+                    return 0xFFFF;   
+                }   
+                while(dwLength--) {   
+                    chData = *pchMessage++; 
+                    wCRC = ((uint16_t)(wCRC) >> 8) ^ wCRC_Table[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];   
+                }   
+                return wCRC;   
             }
     };
     
