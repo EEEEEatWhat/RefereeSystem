@@ -207,7 +207,7 @@ namespace RM_referee{
         while (!exitFlag_)
         {
             std::unique_lock<std::mutex> lock(dataQueue_mutex);
-            condVar_.wait(lock, [this,&offset_bytes]() { return /*!dataQueue_.empty() &&*/ dataQueue_.size() > offset_bytes+1; });//BUG!
+            condVar_.wait(lock, [this,&offset_bytes]() { return /*!dataQueue_.empty() &&*/ dataQueue_.size() > static_cast<std::vector<uint8_t>::size_type>(offset_bytes)+1; });//BUG!
             current_byte = *(dataQueue_.begin() + offset_bytes);
             lock.unlock();
             // RCLCPP_INFO(rclcpp::get_logger("process"),"%#x,%d",current_byte,offset_bytes);

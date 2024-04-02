@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     int i = 1 ; 
     while (i++) {
         for (const auto& packetType : allPacketTypes) {
-            auto now = std::chrono::system_clock::now();
+            // auto now = std::chrono::system_clock::now();
             uint16_t cmd_id = (uint16_t)packetType;
             auto response = client->send_request(cmd_id);
             RCLCPP_INFO(client->get_logger(),"发送请求:0x%x",cmd_id);
