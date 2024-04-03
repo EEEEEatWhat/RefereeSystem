@@ -96,19 +96,21 @@ class RefereeSystem : public rclcpp::Node {
                                         std::ref(serialPort) 
                                     );
                 }
-
                 RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
+                
                 process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
+
+                sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
+                RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
+                
+                plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
+                RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
             }
-            plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
-            RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
 
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize, this, std::placeholders::_1, std::placeholders::_2));
             RCLCPP_INFO(this->get_logger(), "RequestSerializeService has been started.");
 
-            sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
-            RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
             // client = this->create_client<nav2_msgs::action::NavigateToPose>("navigate_to_pose");
             //RCLCPP_INFO(this->get_logger(), "NavigateToPoseCancelClient has been started.");
 
