@@ -21,6 +21,7 @@
 #include "MappingTables.h"
 #include "my_msg_interface/srv/referee_msg.hpp"
 #include "my_msg_interface/msg/power_heat.hpp"
+#include "my_msg_interface/msg/sentry_cmd.hpp"
 
 using std::hex;
 
@@ -106,6 +107,8 @@ class RefereeSystem : public rclcpp::Node {
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize, this, std::placeholders::_1, std::placeholders::_2));
             RCLCPP_INFO(this->get_logger(), "RequestSerializeService has been started.");
 
+            sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
+            RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
             // client = this->create_client<nav2_msgs::action::NavigateToPose>("navigate_to_pose");
             //RCLCPP_INFO(this->get_logger(), "NavigateToPoseCancelClient has been started.");
 
@@ -135,6 +138,7 @@ class RefereeSystem : public rclcpp::Node {
 
         private:    
             rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr plan_sub;
+            rclcpp::Subscription<my_msg_interface::msg::SentryCmd>::SharedPtr sentry_cmd_sub ;
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
             // rclcpp::Client<nav2_msgs::action::NavigateToPose>::SharedPtr client;
             rclcpp::Publisher<my_msg_interface::msg::PowerHeat>::SharedPtr power_heat_pub ;
@@ -261,7 +265,7 @@ class RefereeSystem : public rclcpp::Node {
 
             }
 
-            void DecisionSerialWriteCallback() { 
+            void DecisionSerialWriteCallback(const my_msg_interface::msg::SentryCmd::SharedPtr msg) { 
                 #pragma pack(push, 1) 
                 struct decision_serial_write_t {
                     RM_referee::PacketHeader header;
@@ -290,15 +294,15 @@ class RefereeSystem : public rclcpp::Node {
                     .cmd_id = 0x0301,
                     .robot_interaction_data = {
                         .data_cmd_id = 0x0120,  /*sentry_decision*/
-                        .sender_id = 0x0007,    /*red_sentry：0x0007 blue_sentry:0x0107 Get Grom Decision*/
+                        .sender_id = msg->sender_id,    /*red_sentry：0x0007 blue_sentry:0x0107 Get Grom Decision*/
                         .receiver_id = 0x8080,  /*referee_system:0x8080 */
-                    //     .sentry_cmd = {
-                    //         .confirmRes = msg.data,
-                    //         .confirmInstaRes = msg.data,
-                    //         .pendingMissileExch = msg.data,
-                    //         .remoteMissileReqCount = 0msg.data,
-                    //         .remoteHealthReqCount = msg.data,
-                    //     }
+                        .sentry_cmd = {
+                            .confirmRes = msg->confirm_res,
+                            .confirmInstaRes = msg->confirm_insta_res,
+                            .pendingMissileExch = msg->pending_missile_exch,
+                            .remoteMissileReqCount = msg->remote_missile_req_count,
+                            .remoteHealthReqCount = msg->remote_health_req_count,
+                        }
                     },
                     .frame_tail = 0x0000
                 };
