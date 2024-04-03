@@ -219,7 +219,29 @@ class RefereeSystem : public rclcpp::Node {
                 }
             }
 
+            /**
+             * @brief   该数据包用于发送己方机器人的路径规划信息
+             *          该数据依赖下列信息
+             *              1.地图原点
+             *              2.地图xy方向
+             *              3.红蓝方
+             * 解决办法有两个：1.在地图的yaml中直接设置地图原点和xy方向和裁判系统端地图一致
+             *              2.设置参数服务器，通过ros2的参数服务器来获取地图原点和xy的旋转角度
+            */
             void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
+                struct map_data_t {
+                    RM_referee::PacketHeader header;
+                    uint16_t cmd_id;
+                    struct {
+                        uint8_t intention; 
+                        uint16_t start_position_x; 
+                        uint16_t start_position_y; 
+                        int8_t delta_x[49]; 
+                        int8_t delta_y[49]; 
+                        uint16_t sender_id;
+                    }path;
+                    uint16_t frame_tail;
+                };
                 RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
                 // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
                 std::vector<geometry_msgs::msg::PoseStamped> result; 
@@ -230,6 +252,9 @@ class RefereeSystem : public rclcpp::Node {
                     }
                 } else {
                     result = msg->poses;
+                }
+                for (size_t i = 0; i < result.size(); i++) {
+                    /* code */
                 }
 
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
