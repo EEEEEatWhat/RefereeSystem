@@ -83,14 +83,14 @@ class RefereeSystem : public rclcpp::Node {
                 //(线程类接受类的重载成员函数)-suzukisuncy
                 if(en_file_output) {
                     read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::AsyncSerialRead),
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::SerialRead),
                                         &Factory_, 
                                         std::ref(serialPort) ,
                                         file
                                     );
                 } else {
                     read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::AsyncSerialRead),
+                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::SerialRead),
                                         &Factory_, 
                                         std::ref(serialPort) 
                                     );
