@@ -103,9 +103,10 @@ class RefereeSystem : public rclcpp::Node {
 
                 sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
                 RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
-                
+
                 plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
                 RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
+                //以上全部与串口通信相关!
             }
 
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize, this, std::placeholders::_1, std::placeholders::_2));
