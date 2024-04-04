@@ -157,8 +157,13 @@ class RefereeSystem : public rclcpp::Node {
             std::ofstream* file;    
             bool en_file_output = false;
             std::string file_path = "log/";
-            int PacketHeaderSequenceNumber = 0;
-
+            int DecisionPacketHeaderSequenceNumber = 0;
+            int PathPacketHeaderSequenceNumber = 0;
+            struct pose_t {
+                float x;
+                float y;
+                float theta;
+            } red_path_start_position, blue_path_start_position;
             void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
                 serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
                 RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
@@ -185,6 +190,14 @@ class RefereeSystem : public rclcpp::Node {
                 this->declare_parameter<std::vector<std::string>>("serialport_arry",{"ttyUSB0"});
                 this->declare_parameter<bool>("file_output", false);
                 this->declare_parameter<std::string>("file_output_path", "log");
+                this->declare_parameter<float>("red_path_start_position_x", 0.00);
+                this->declare_parameter<float>("red_path_start_position_y", 0.00);
+                this->declare_parameter<float>("red_path_start_position_theta", 0.00);
+                this->declare_parameter<float>("blue_path_start_position_x", 0.00);
+                this->declare_parameter<float>("blue_path_start_position_y", 0.00);
+                this->declare_parameter<float>("blue_path_start_position_theta", 0.00);
+                this->declare_parameter<int>("sentry_id", 0x0007); /*red_sentry：0x0007 blue_sentry:0x0107 Get Grom Decision*/
+
                 file_path = this->get_parameter("file_output_path").as_string();
                 en_file_output = this->get_parameter("file_output").as_bool();
 
@@ -192,6 +205,13 @@ class RefereeSystem : public rclcpp::Node {
                 for (const auto& port : serialport_arry) {
                     RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());
                 }
+                red_path_start_position.x = this->get_parameter("red_path_start_position_x").as_double();
+                red_path_start_position.y = this->get_parameter("red_path_start_position_y").as_double();
+                red_path_start_position.theta = this->get_parameter("red_path_start_position_theta").as_double();
+                blue_path_start_position.x = this->get_parameter("blue_path_start_position_x").as_double();
+                blue_path_start_position.y = this->get_parameter("blue_path_start_position_y").as_double();
+                blue_path_start_position.theta = this->get_parameter("blue_path_start_position_theta").as_double();
+
             }
             void Callback() {
                 auto data_202 = Factory_.Mapserialize(0x202);
@@ -216,6 +236,17 @@ class RefereeSystem : public rclcpp::Node {
                 send_data.shooter_17mm_1_barrel_heat = struct_202.shooter_17mm_1_barrel_heat;
                 send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
                 power_heat_pub->publish(send_data);
+
+                if(struct_201.robot_id == 7) {
+                    RCLCPP_INFO(this->get_logger(), "red_sentry");        
+                    this->declare_parameter("sentry_id",struct_201.robot_id);
+                } else if(struct_201.robot_id == 107) {
+                    RCLCPP_INFO(this->get_logger(), "blue_sentry");
+                    this->declare_parameter("sentry_id",struct_201.robot_id);
+                } else {
+                    RCLCPP_WARN(this->get_logger(), "robot_id:0x%x",struct_201.robot_id);
+                }
+
                 bool can_cancel_flag = 1 ;
                 if(can_cancel_flag && struct_201.current_HP < 300) {    //最低血量->参数服务器
                     //发送cancel
@@ -236,6 +267,7 @@ class RefereeSystem : public rclcpp::Node {
              *              2.设置参数服务器，通过ros2的参数服务器来获取地图原点和xy的旋转角度
             */
             void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
+                #pragma pack(push, 1) 
                 struct map_data_t {
                     RM_referee::PacketHeader header;
                     uint16_t cmd_id;
@@ -248,7 +280,29 @@ class RefereeSystem : public rclcpp::Node {
                         uint16_t sender_id;
                     }path;
                     uint16_t frame_tail;
+                }map_data = {
+                    .header = {
+                        .SOF = 0xA5,
+                        .DataLength = 105,
+                        .SequenceNumber = static_cast<uint8_t>(PathPacketHeaderSequenceNumber++),
+                        .CRC8 = 0x00,
+                    },
+                    .cmd_id = 0x0301,
+                    .path = {
+                        .intention = 0x03, //0x01:到目标点攻击 0x02:到目标点防御 0x03:到目标点
+                        .start_position_x = 0,
+                        .start_position_y = 0,
+                        .delta_x = {0},
+                        .delta_y = {0},
+                        .sender_id = (uint16_t)(this->get_parameter("sentry_id").as_int()),
+                    },
+                    .frame_tail = 0x0000
+                
                 };
+                #pragma pack(pop)
+                static_assert(sizeof(map_data_t) == 114, "map_data_t size error");
+                map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-2);
+                map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
                 RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
                 // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
                 std::vector<geometry_msgs::msg::PoseStamped> result; 
@@ -265,7 +319,14 @@ class RefereeSystem : public rclcpp::Node {
                 }
 
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
-
+                serialPort.async_write_some(boost::asio::buffer(&map_data, sizeof(map_data_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                    if (!error) {
+                        RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
+                        //输出一些重要信息
+                    } else {
+                        RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
+                    }
+                });
             }
 
             void DecisionSerialWriteCallback(const my_msg_interface::msg::SentryCmd::SharedPtr msg) { 
@@ -291,13 +352,13 @@ class RefereeSystem : public rclcpp::Node {
                     .header = {
                         .SOF = 0xA5,
                         .DataLength = 10,
-                        .SequenceNumber = static_cast<uint8_t>(PacketHeaderSequenceNumber++),
+                        .SequenceNumber = static_cast<uint8_t>(DecisionPacketHeaderSequenceNumber++),
                         .CRC8 = 0x00,
                     },
                     .cmd_id = 0x0301,
                     .robot_interaction_data = {
                         .data_cmd_id = 0x0120,  /*sentry_decision*/
-                        .sender_id = msg->sender_id,    /*red_sentry：0x0007 blue_sentry:0x0107 Get Grom Decision*/
+                        .sender_id = (uint16_t)(this->get_parameter("sentry_id").as_int()),    /*red_sentry：007 blue_sentry:107 */
                         .receiver_id = 0x8080,  /*referee_system:0x8080 */
                         .sentry_cmd = {
                             .confirmRes = msg->confirm_res,
@@ -305,6 +366,7 @@ class RefereeSystem : public rclcpp::Node {
                             .pendingMissileExch = msg->pending_missile_exch,
                             .remoteMissileReqCount = msg->remote_missile_req_count,
                             .remoteHealthReqCount = msg->remote_health_req_count,
+                            .reserved = 0x0000,
                         }
                     },
                     .frame_tail = 0x0000
