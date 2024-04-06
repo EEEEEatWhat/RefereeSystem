@@ -9,6 +9,13 @@
 #include <boost/asio.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/convert.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 #include <fstream>
 #include <ostream>
 #include <std_msgs/msg/float32.hpp>
@@ -33,6 +40,7 @@ class RefereeSystem : public rclcpp::Node {
         ,serialPort(ioService)
         {
             GetParam();
+
             char cwd[1024];
             if (getcwd(cwd, sizeof(cwd)) != NULL) {
                 RCLCPP_INFO(this->get_logger(), "Current working dir: %s", cwd);
@@ -109,6 +117,9 @@ class RefereeSystem : public rclcpp::Node {
                 //以上全部与串口通信相关!
             }
 
+            pBuffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+            pTfListener = std::make_shared<tf2_ros::TransformListener>(*pBuffer,this);
+
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize, this, std::placeholders::_1, std::placeholders::_2));
             RCLCPP_INFO(this->get_logger(), "RequestSerializeService has been started.");
 
@@ -145,6 +156,8 @@ class RefereeSystem : public rclcpp::Node {
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
             // rclcpp::Client<nav2_msgs::action::NavigateToPose>::SharedPtr client;
             rclcpp::Publisher<my_msg_interface::msg::PowerHeat>::SharedPtr power_heat_pub ;
+            std::unique_ptr<tf2_ros::Buffer> pBuffer;
+            std::shared_ptr<tf2_ros::TransformListener> pTfListener;
             rclcpp::TimerBase::SharedPtr timer;
             uint16_t serialize_memcount = 0;
             RM_referee::TypeMethodsTables Factory_;
@@ -211,7 +224,25 @@ class RefereeSystem : public rclcpp::Node {
                 blue_path_start_position.x = this->get_parameter("blue_path_start_position_x").as_double();
                 blue_path_start_position.y = this->get_parameter("blue_path_start_position_y").as_double();
                 blue_path_start_position.theta = this->get_parameter("blue_path_start_position_theta").as_double();
+                tf2_ros::StaticTransformBroadcaster broadcaster(this);
+                geometry_msgs::msg::TransformStamped transform;
+                tf2::Quaternion q;
+                transform.header.stamp = this->now();
+                transform.header.frame_id = "map";
+                transform.transform.translation.z = 0;
+                q.setRPY(0 , 0 , red_path_start_position.theta);
+                transform.transform.translation.x = red_path_start_position.x;
+                transform.transform.translation.y = red_path_start_position.y;
+                transform.transform.rotation = tf2::toMsg(q);
+                transform.child_frame_id = "red_frame";
+                broadcaster.sendTransform(transform);
 
+                q.setRPY(0 , 0 , blue_path_start_position.theta);
+                transform.transform.translation.x = blue_path_start_position.x;
+                transform.transform.translation.y = blue_path_start_position.y;
+                transform.transform.rotation = tf2::toMsg(q);
+                transform.child_frame_id = "blue_frame";
+                broadcaster.sendTransform(transform);
             }
             void Callback() {
                 auto data_202 = Factory_.Mapserialize(0x202);
@@ -263,10 +294,15 @@ class RefereeSystem : public rclcpp::Node {
              *              1.地图原点
              *              2.地图xy方向
              *              3.红蓝方
-             * 解决办法有两个：1.在地图的yaml中直接设置地图原点和xy方向和裁判系统端地图一致
-             *              2.设置参数服务器，通过ros2的参数服务器来获取地图原点和xy的旋转角度
+             * @brief 解决办法有两个：1.在地图的yaml中直接设置地图原点和xy方向和裁判系统端地图一致，可能对定位有影响：需要修改地图原点
+             *                  2.设置参数服务器，通过ros2的参数服务器来获取地图原点和xy的旋转角度
+             *                  3.添加额外坐标系，给定裁判系统地图坐标系通过tf变换获取 recommend
             */
             void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
+                bool exit = false;
+                ( pBuffer->canTransform("map", "red_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) &&
+                pBuffer->canTransform("map", "blue_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ) ? : exit = true;
+                if(exit) return;
                 #pragma pack(push, 1) 
                 struct map_data_t {
                     RM_referee::PacketHeader header;
@@ -305,18 +341,22 @@ class RefereeSystem : public rclcpp::Node {
                 map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
                 RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
                 // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
-                std::vector<geometry_msgs::msg::PoseStamped> result; 
+                std::vector<geometry_msgs::msg::Pose> path_poses_in_red_frame;
+                std::vector<geometry_msgs::msg::Pose> path_poses_in_blue_frame;
                 if (msg->poses.size() > 49) {//降采样到49个点
                     float step = float(msg->poses.size()) / 49;
-                    for (float i = 0; i < msg->poses.size(); i += step) {
-                        result.push_back(msg->poses[int(i)]);
+                    int count ;
+                    for (float i = 0 ; i < msg->poses.size(); i += step) {
+                        pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
                     }
                 } else {
-                    result = msg->poses;
+                    for (float i = 0 ; i < msg->poses.size(); i ++) {
+                        int count ;
+                        pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
+                    }
                 }
-                for (size_t i = 0; i < result.size(); i++) {
-                    /* code */
-                }
+
+
 
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
                 serialPort.async_write_some(boost::asio::buffer(&map_data, sizeof(map_data_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {

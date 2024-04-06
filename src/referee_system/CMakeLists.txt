@@ -16,6 +16,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(my_msg_interface REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 add_executable(run_referee_system 
   # src/test.cpp 
@@ -33,7 +35,8 @@ ament_target_dependencies(
   my_msg_interface
   nav2_msgs
   nav_msgs
-
+  tf2
+  tf2_geometry_msgs
   )
 target_include_directories(run_referee_system
   PRIVATE
