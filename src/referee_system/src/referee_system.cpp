@@ -88,6 +88,11 @@ class RefereeSystem : public rclcpp::Node {
                 // throw std::runtime_error("Failed to open any serial port");
                 RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
             } else {
+                io_run = std::thread([&ioService](){
+                            while (true) {
+                                ioService.run();
+                            }
+                        });
                 //WTF？ Is this CPP ? ? ? 
                 //(线程类接受类的重载成员函数)-suzukisuncy
                 if(en_file_output) {
@@ -160,6 +165,7 @@ class RefereeSystem : public rclcpp::Node {
             std::shared_ptr<tf2_ros::TransformListener> pTfListener;
             rclcpp::TimerBase::SharedPtr timer;
             uint16_t serialize_memcount = 0;
+
             RM_referee::TypeMethodsTables Factory_;
             std::vector<std::string> serialport_arry;
             boost::asio::serial_port serialPort;
@@ -167,9 +173,13 @@ class RefereeSystem : public rclcpp::Node {
             std::thread spin_thread;
             std::thread read_thread;
             std::thread process_thread;
+            std::thread io_run;
+
             std::ofstream* file;    
             bool en_file_output = false;
             std::string file_path = "log/";
+
+            bool sentry_id_init_flag = false;
             int DecisionPacketHeaderSequenceNumber = 0;
             int PathPacketHeaderSequenceNumber = 0;
             struct pose_t {
@@ -177,6 +187,7 @@ class RefereeSystem : public rclcpp::Node {
                 float y;
                 float theta;
             } red_path_start_position, blue_path_start_position;
+
             void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
                 serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
                 RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
@@ -268,14 +279,19 @@ class RefereeSystem : public rclcpp::Node {
                 send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
                 power_heat_pub->publish(send_data);
 
-                if(struct_201.robot_id == 7) {
-                    RCLCPP_INFO(this->get_logger(), "red_sentry");        
-                    this->declare_parameter("sentry_id",struct_201.robot_id);
-                } else if(struct_201.robot_id == 107) {
-                    RCLCPP_INFO(this->get_logger(), "blue_sentry");
-                    this->declare_parameter("sentry_id",struct_201.robot_id);
-                } else {
-                    RCLCPP_WARN(this->get_logger(), "robot_id:0x%x",struct_201.robot_id);
+                if(!sentry_id_init_flag ) {
+                    if(struct_201.robot_id == 7 || struct_201.robot_id ==107) {
+                        if(this->get_parameter("sentry_id").as_int() ==  struct_201.robot_id ) {
+                            RCLCPP_INFO(this->get_logger(),"Got sentry_id = %d",struct_201.robot_id );
+                            sentry_id_init_flag = true ;
+                        } else {
+                            this->set_parameter(rclcpp::Parameter("sentry_id", struct_201.robot_id));
+                            RCLCPP_INFO(this->get_logger(),"Got sentry_id = %d",struct_201.robot_id );
+                            sentry_id_init_flag = true ;
+                        }
+                    } else {
+                        RCLCPP_WARN(this->get_logger(),"sentry_id got aborted : %d ! current id is %d",struct_201.robot_id, this->get_parameter("sentry_id").as_int());
+                    }
                 }
 
                 bool can_cancel_flag = 1 ;
@@ -299,10 +315,9 @@ class RefereeSystem : public rclcpp::Node {
              *                  3.添加额外坐标系，给定裁判系统地图坐标系通过tf变换获取 recommend
             */
             void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
-                bool exit = false;
-                ( pBuffer->canTransform("map", "red_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) &&
-                pBuffer->canTransform("map", "blue_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ) ? : exit = true;
-                if(exit) return;
+                if( !pBuffer->canTransform("map", "red_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ||
+                !pBuffer->canTransform("map", "blue_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ) 
+                    return;
                 #pragma pack(push, 1) 
                 struct map_data_t {
                     RM_referee::PacketHeader header;
@@ -337,8 +352,6 @@ class RefereeSystem : public rclcpp::Node {
                 };
                 #pragma pack(pop)
                 static_assert(sizeof(map_data_t) == 114, "map_data_t size error");
-                map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-2);
-                map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
                 RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
                 // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
                 std::vector<geometry_msgs::msg::Pose> path_poses_in_red_frame;
@@ -355,8 +368,18 @@ class RefereeSystem : public rclcpp::Node {
                         pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
                     }
                 }
+                if(!path_poses_in_red_frame.empty()) {
+                    map_data.path.start_position_x = path_poses_in_red_frame.front().position.x;
+                    map_data.path.start_position_y = path_poses_in_red_frame.front().position.y;
+                }
+                for(int i =1 ;i<path_poses_in_red_frame.size();i++) {
+                    map_data.path.delta_x[i-1] = path_poses_in_red_frame[i].position.x - path_poses_in_red_frame[i-1].position.x;
+                    map_data.path.delta_y[i-1] = path_poses_in_red_frame[i].position.y - path_poses_in_red_frame[i-1].position.y;
+                }
 
-
+                map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-2);
+                map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
+                
 
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
                 serialPort.async_write_some(boost::asio::buffer(&map_data, sizeof(map_data_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
@@ -416,14 +439,18 @@ class RefereeSystem : public rclcpp::Node {
                 decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-2);
                 decision_serial_write.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&decision_serial_write,sizeof(decision_serial_write_t)-2);
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
-                serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
-                    if (!error) {
-                        RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
-                        //输出一些重要信息
-                    } else {
-                        RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
-                    }
-                });
+                RCLCPP_INFO(this->get_logger(),"sentry_cmd ! ! ! ");
+                // serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                //     if (!error) {
+                //         // RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
+                //         std::cout<< "Wrote "<< bytes_transferred <<"bytes";
+                //         //输出一些重要信息
+                //     } else {
+                //         RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
+                //     }
+                // });
+                serialPort.write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)));
+                RCLCPP_INFO(this->get_logger(),"sentry_cmd 1 1 1  ");
             }
 
 // ros2 topic info /plan
@@ -447,6 +474,8 @@ int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
     boost::asio::io_service ioservice_;  
+    //创建一个work对象这将阻止io_service::run在空闲时返回；
+    boost::asio::io_service::work work(ioservice_);
     rclcpp::spin(std::make_shared<RefereeSystem>(ioservice_));
     rclcpp::shutdown();
     return 0;
