@@ -96,6 +96,11 @@ class RefereeSystem : public rclcpp::Node {
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
             }
 
+            service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
+            RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
+                
+            }
+
         ~RefereeSystem() {
             Factory_.exitFlag_ = true;        
             if (read_thread.joinable()) {
