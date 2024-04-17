@@ -270,6 +270,10 @@ class RefereeSystem : public rclcpp::Node {
                 RM_referee::RobotStateStruct struct_201;
                 std::memcpy(&struct_201,data_201.data(),data_201.size());
 
+                auto data_303 = Factory_.Mapserialize(0x303);
+                RM_referee::MinimapInteractionCommsMessageStruct struct_303;
+                std::memcpy(&struct_303,data_303.data(),data_303.size());
+
                 my_msg_interface::msg::PowerHeat send_data;
                 send_data.buffer_energy = struct_202.buffer_energy;
                 send_data.chassis_power = struct_202.chassis_power;
@@ -293,7 +297,14 @@ class RefereeSystem : public rclcpp::Node {
                         RCLCPP_WARN(this->get_logger(),"sentry_id got aborted : %d ! current id is %d",struct_201.robot_id, this->get_parameter("sentry_id").as_int());
                     }
                 }
-
+                if(struct_303.cmd_source != 0)
+                    RCLCPP_INFO(this->get_logger(),"%d %#X %c %f %f ",
+                                                    struct_303.target_robot_id,
+                                                    struct_303.cmd_source,
+                                                    struct_303.cmd_keyboard,
+                                                    struct_303.target_position_x,
+                                                    struct_303.target_position_y
+                                                    );
                 bool can_cancel_flag = 1 ;
                 if(can_cancel_flag && struct_201.current_HP < 300) {    //最低血量->参数服务器
                     //发送cancel
@@ -338,7 +349,7 @@ class RefereeSystem : public rclcpp::Node {
                         .SequenceNumber = static_cast<uint8_t>(PathPacketHeaderSequenceNumber++),
                         .CRC8 = 0x00,
                     },
-                    .cmd_id = 0x0301,
+                    .cmd_id = 0x0307,
                     .path = {
                         .intention = 0x03, //0x01:到目标点攻击 0x02:到目标点防御 0x03:到目标点
                         .start_position_x = 0,
@@ -368,15 +379,18 @@ class RefereeSystem : public rclcpp::Node {
                         pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
                     }
                 }
-                if(!path_poses_in_red_frame.empty()) {
-                    map_data.path.start_position_x = path_poses_in_red_frame.front().position.x;
-                    map_data.path.start_position_y = path_poses_in_red_frame.front().position.y;
-                }
-                for(int i =1 ;i<path_poses_in_red_frame.size();i++) {
-                    map_data.path.delta_x[i-1] = path_poses_in_red_frame[i].position.x - path_poses_in_red_frame[i-1].position.x;
-                    map_data.path.delta_y[i-1] = path_poses_in_red_frame[i].position.y - path_poses_in_red_frame[i-1].position.y;
-                }
-
+                // if(!path_poses_in_red_frame.empty()) {
+                //     map_data.path.start_position_x = path_poses_in_red_frame.front().position.x;
+                //     map_data.path.start_position_y = path_poses_in_red_frame.front().position.y;
+                // }
+                // for(int i =1 ;i<path_poses_in_red_frame.size();i++) {
+                //     map_data.path.delta_x[i-1] = path_poses_in_red_frame[i].position.x - path_poses_in_red_frame[i-1].position.x;
+                //     map_data.path.delta_y[i-1] = path_poses_in_red_frame[i].position.y - path_poses_in_red_frame[i-1].position.y;
+                // }
+                    map_data.path.start_position_x = 5.5;
+                    map_data.path.start_position_y = 7.5;
+                    map_data.path.delta_x[0] = 5;
+                    map_data.path.delta_y[0] = 5;
                 map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-2);
                 map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
                 
@@ -438,19 +452,27 @@ class RefereeSystem : public rclcpp::Node {
                 static_assert(sizeof(decision_serial_write_t) == 19, "decision_serial_write_t size error");
                 decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-2);
                 decision_serial_write.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&decision_serial_write,sizeof(decision_serial_write_t)-2);
+                if(Factory_.crc16.Verify_CRC16_Check_Sum((uint8_t*)&decision_serial_write,19)){
+                    RCLCPP_INFO(this->get_logger(),"Right！");
+                } else{
+                    RCLCPP_INFO(this->get_logger(),"False！");
+                }
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
-                RCLCPP_INFO(this->get_logger(),"sentry_cmd ! ! ! ");
-                // serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
-                //     if (!error) {
-                //         // RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
-                //         std::cout<< "Wrote "<< bytes_transferred <<"bytes";
-                //         //输出一些重要信息
-                //     } else {
-                //         RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
-                //     }
-                // });
-                serialPort.write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)));
-                RCLCPP_INFO(this->get_logger(),"sentry_cmd 1 1 1  ");
+                RCLCPP_INFO(this->get_logger(),"sentry_cmd %d %d %d %d ",msg->confirm_res,
+                                                                        msg->confirm_insta_res,
+                                                                        msg->pending_missile_exch,
+                                                                        msg->remote_missile_req_count,
+                                                                        msg->remote_health_req_count
+                                                                        );
+                serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                    if (!error) {
+                        RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
+                        //输出一些重要信息
+                    } else {
+                        RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
+                    }
+                });
+                // serialPort.write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)));
             }
 
 // ros2 topic info /plan

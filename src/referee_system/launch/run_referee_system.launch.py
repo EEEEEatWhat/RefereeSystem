@@ -21,7 +21,21 @@ def generate_launch_description():
         executable="run_referee_system",
         parameters=[config_path],
         )
+    red_frame_tf = Node(
+    package="tf2_ros",
+    executable="static_transform_publisher",
+    output="log" ,
+    arguments=["0", "0", "0", "0", "0", "0", "map", "red_frame"]
+    )
+    blue_frame_tf = Node(
+    package="tf2_ros",
+    executable="static_transform_publisher",
+    output="log" ,
+    arguments=["0", "0", "0", "0", "0", "0", "map", "blue_frame"]
+    )
     return LaunchDescription([
         declare_config_path_cmd,
         t1,
+        red_frame_tf,
+        blue_frame_tf,
     ])
