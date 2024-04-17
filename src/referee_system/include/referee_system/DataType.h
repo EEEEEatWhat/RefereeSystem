@@ -296,6 +296,7 @@ namespace RM_referee{
     static_assert(sizeof(CustomRobotDataStruct) == 30, "CustomRobotDataStruct must be 30 bytes long with packing");
     GENERATEPACK(CustomRobotData,CustomRobotDataStruct)
 
+    //BUG:这个数据裁判系统串口协议有问题，实际为uint16 cmd_source
     //0x0303 MinimapInteractionCommsMessagePacket 11 MinimapInteractionCommsMessage
     #pragma pack(push, 1)
     struct MinimapInteractionCommsMessageStruct { 
@@ -303,9 +304,9 @@ namespace RM_referee{
         float target_position_y; 
         uint8_t cmd_keyboard; 
         uint8_t target_robot_id; 
-        uint8_t cmd_source; };
+        uint16_t cmd_source; };
     #pragma pack(pop)
-    static_assert(sizeof(MinimapInteractionCommsMessageStruct) == 11, "MinimapInteractionCommsMessageStruct must be 30 bytes long with packing");
+    static_assert(sizeof(MinimapInteractionCommsMessageStruct) == 12, "MinimapInteractionCommsMessageStruct must be 30 bytes long with packing");
     GENERATEPACK(MinimapInteractionCommsMessage,MinimapInteractionCommsMessageStruct)
 
     //0x0304 KeyboardMouseMessagePacket 12 KeyboardMouseMessage
