@@ -97,6 +97,8 @@ namespace RM_referee {
 
         void SerialRead(boost::asio::serial_port& serialPort ) ;          
 
+        void SerialRead(std::string replay_file_path) ;          
+
 
         /**
          * @brief  处理数据

@@ -331,6 +331,32 @@ namespace RM_referee{
 
     };
 
+    /**
+     * @note for replay 
+    */
+    void TypeMethodsTables::SerialRead(std::string replay_file_path) {
+            int BAUD_RATE = 14400; // 115200 bits per second = 14400 bytes per second
+            int SLEEP_DURATION = 1000; // in milliseconds
+            std::ifstream file(replay_file_path, std::ios::binary);
+            std::vector<char> buffer(BAUD_RATE);
+
+            if(!file.is_open()) {
+                RCLCPP_ERROR(rclcpp::get_logger("replay"), "Unable to open the file.");
+                return ;
+            }
+
+            while (!file.eof()) {
+                file.read(buffer.data(), BAUD_RATE);
+
+                {
+                    std::lock_guard<std::mutex> lock(dataQueue_mutex);
+                    dataQueue_.insert(dataQueue_.end(), buffer.begin(), buffer.end());
+                }
+
+                condVar_.notify_one();
+                std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_DURATION));
+            } 
+    };
 
 
     int TypeMethodsTables::read() {
@@ -387,5 +413,6 @@ namespace RM_referee{
             } else
                 it ++;
     };
+
 
 }
