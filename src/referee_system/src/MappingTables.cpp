@@ -356,6 +356,9 @@ namespace RM_referee{
                 condVar_.notify_one();
                 std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_DURATION));
             } 
+            if(file.eof()){
+                RCLCPP_ERROR(rclcpp::get_logger("replay"), "file is over.");
+            }
     };
 
 
