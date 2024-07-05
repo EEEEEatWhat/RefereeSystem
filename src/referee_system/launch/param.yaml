@@ -11,3 +11,4 @@
     use_sim_time: false
     file_output: false
     file_output_path: /home/suzuki/RefereeSystem/
+    replay_file_path: /home/suzuki/Downloads/dump/serialPortdump_20240515153746.txt

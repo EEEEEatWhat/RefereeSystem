@@ -40,6 +40,29 @@ install(TARGETS
 run_referee_system
 DESTINATION lib/${PROJECT_NAME})
 
+add_executable(replay 
+  src/replay.cpp
+  src/MappingTables.cpp 
+  src/DataType.cpp
+  )
+
+ament_target_dependencies(
+  replay
+  ament_cmake
+  rclcpp
+  std_msgs
+  geometry_msgs
+  my_msg_interface
+
+  )
+target_include_directories(replay
+  PRIVATE
+    include
+    ${PROJECT_SOURCE_DIR}/include/referee_system/
+)
+install(TARGETS 
+replay
+DESTINATION lib/${PROJECT_NAME})
 
 # # # # # # # # # # # # # # # # # # # # # # # # # #
 add_executable(runtest 
