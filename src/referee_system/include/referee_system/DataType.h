@@ -95,12 +95,15 @@ namespace RM_referee{
     GENERATEPACK(GameStatus,GameStatusStruct)
 
     //0x0002 GameResultEventPacket 1 GameResultEvent
+    #pragma pack(push, 1)
     struct GameResultEventStruct { 
         uint8_t winner; }; 
+    #pragma pack(pop)
     static_assert(sizeof(GameResultEventStruct) == 1, "GameResultEventStruct must be 1 bytes long with packing");
     GENERATEPACK(GameResultEvent,GameResultEventStruct)
 
     //0x0003 GameRobotHPPacket 32 GameRobotHP
+    #pragma pack(push, 1)
     struct GameRobotHPStruct { 
         uint16_t red_1_robot_HP; 
         uint16_t red_2_robot_HP; 
@@ -118,21 +121,26 @@ namespace RM_referee{
         uint16_t blue_7_robot_HP; 
         uint16_t blue_outpost_HP; 
         uint16_t blue_base_HP; };
+    #pragma pack(pop)
     static_assert(sizeof(GameRobotHPStruct) == 32, "GameRobotHPStruct must be 32 bytes long with packing");
     GENERATEPACK(GameRobotHP,GameRobotHPStruct)
 
     //0x0101  PlaygroundEventPacket 4 PlaygroundEvent
+    #pragma pack(push, 1)
     struct PlaygroundEventStruct { 
         uint32_t event_data; };
+    #pragma pack(pop)
     static_assert(sizeof(PlaygroundEventStruct) == 4, "PlaygroundEventStruct must be 4 bytes long with packing");
     GENERATEPACK(PlaygroundEvent,PlaygroundEventStruct)
 
     //0x0102 ExtSupplyProjectileActionPacket 4 ExtSupplyProjectileAction
+    #pragma pack(push, 1)
     struct ExtSupplyProjectileActionStruct { 
         uint8_t reserved; 
         uint8_t supply_robot_id;  
         uint8_t supply_projectile_step; 
         uint8_t supply_projectile_num; };
+    #pragma pack(pop);
     static_assert(sizeof(ExtSupplyProjectileActionStruct) == 4, "ExtSupplyProjectileActionStruct must be 4 bytes long with packing");
     GENERATEPACK(ExtSupplyProjectileAction,ExtSupplyProjectileActionStruct)
 
@@ -169,10 +177,11 @@ namespace RM_referee{
         uint8_t power_management_chassis_output : 1;   
         uint8_t power_management_shooter_output : 1;  }; 
     #pragma pack(pop)
-    static_assert(sizeof(RobotStateStruct) == 13 , "RobotStateStruct must be 3 bytes long with packing");
+    static_assert(sizeof(RobotStateStruct) == 13 , "RobotStateStruct must be 13 bytes long with packing");
     GENERATEPACK(RobotState,RobotStateStruct)
 
     //0x0202 PowerHeatDataPacket 16 PowerHeatData
+    #pragma pack(push, 1)
     struct PowerHeatDataStruct { 
         uint16_t chassis_voltage; 
         uint16_t chassis_current; 
@@ -181,15 +190,18 @@ namespace RM_referee{
         uint16_t shooter_17mm_1_barrel_heat; 
         uint16_t shooter_17mm_2_barrel_heat; 
         uint16_t shooter_42mm_barrel_heat;}; 
+    #pragma pack(pop)
     static_assert(sizeof(PowerHeatDataStruct) == 16, "PowerHeatDataStruct must be 16 bytes long with packing");
     GENERATEPACK(PowerHeatData,PowerHeatDataStruct)
 
     //0x0203 RobotPositionPacket 12 RobotPosition
+    #pragma pack(push, 1)
     struct RobotPositionStruct { 
         float x; 
         float y; 
-        float angle; }; 
-    static_assert(sizeof(RobotPositionStruct) == 12, "RobotPositionStruct must be 16 bytes long with packing");
+        float angle; };
+    #pragma pack(pop) 
+    static_assert(sizeof(RobotPositionStruct) == 12, "RobotPositionStruct must be 12 bytes long with packing");
     GENERATEPACK(RobotPosition,RobotPositionStruct)
 
     //0x0204 RobotBuffPacket 5 RobotBuff
@@ -201,14 +213,16 @@ namespace RM_referee{
         uint8_t vulnerability_buff; 
         uint16_t attack_buff; }; 
     #pragma pack(pop)
-    static_assert(sizeof(RobotBuffStruct) == 6, "RobotBuffStruct must be 16 bytes long with packing");
+    static_assert(sizeof(RobotBuffStruct) == 6, "RobotBuffStruct must be 6 bytes long with packing");
     GENERATEPACK(RobotBuff,RobotBuffStruct)
 
     //0x0205 AirSupportDataPacket 2 AirSupportData
+    #pragma pack(push, 1)
     struct AirSupportDataStruct { 
         uint8_t airforce_status; 
         uint8_t time_remain;};
-    static_assert(sizeof(AirSupportDataStruct) == 2, "AirSupportDataStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(AirSupportDataStruct) == 2, "AirSupportDataStruct must be 2 bytes long with packing");
     GENERATEPACK(AirSupportData,AirSupportDataStruct)
 
     //0x0206 DamageEventPacket 1 DamageEvent
@@ -217,7 +231,7 @@ namespace RM_referee{
         uint8_t armor_id : 4; 
         uint8_t HP_deduction_reason : 4;};
     #pragma pack(pop)
-    static_assert(sizeof(DamageEventStruct) == 1, "DamageEventStruct must be 16 bytes long with packing");
+    static_assert(sizeof(DamageEventStruct) == 1, "DamageEventStruct must be 1 bytes long with packing");
     GENERATEPACK(DamageEvent,DamageEventStruct)
 
     //0x0207 ShootEventPacket 7 ShootEvent
@@ -228,33 +242,40 @@ namespace RM_referee{
         uint8_t launching_frequency;  
         float initial_speed;  }; 
     #pragma pack(pop)
-    static_assert(sizeof(ShootEventSruct) == 7, "ShootEventSruct must be 16 bytes long with packing");
+    static_assert(sizeof(ShootEventSruct) == 7, "ShootEventSruct must be 7 bytes long with packing");
     GENERATEPACK(ShootEvent,ShootEventSruct)
 
     //0x0208 ProjectileAllowancePacket 6 ProjectileAllowance
+    #pragma pack(push, 1)
     struct ProjectileAllowanceStruct { 
         uint16_t projectile_allowance_17mm; 
         uint16_t projectile_allowance_42mm;   
         uint16_t remaining_gold_coin; }; 
-    static_assert(sizeof(ProjectileAllowanceStruct) == 6, "ProjectileAllowanceStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(ProjectileAllowanceStruct) == 6, "ProjectileAllowanceStruct must be 7 bytes long with packing");
     GENERATEPACK(ProjectileAllowance,ProjectileAllowanceStruct)
 
     //0x0209 RobotRfidStatePacket 4 RobotRfidState
+    #pragma pack(push, 1)
     struct RobotRfidStateStruct { 
         uint32_t rfid_status; };
-    static_assert(sizeof(RobotRfidStateStruct) == 4, "RobotRfidStateStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(RobotRfidStateStruct) == 4, "RobotRfidStateStruct must be 4 bytes long with packing");
     GENERATEPACK(RobotRfidState,RobotRfidStateStruct)
 
     //0x020A DartClientCmdPacket 6 DartClientCmd
+    #pragma pack(push, 1)
     struct DartClientCmdStruct { 
         uint8_t dart_launch_opening_status;   
         uint8_t reserved;   
         uint16_t target_change_time;   
         uint16_t latest_launch_cmd_time; };
-    static_assert(sizeof(DartClientCmdStruct) == 6, "DartClientCmdStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(DartClientCmdStruct) == 6, "DartClientCmdStruct must be 6 bytes long with packing");
     GENERATEPACK(DartClientCmd,DartClientCmdStruct)
 
     //0x020B GroundRobotPositionPacket 40 GroundRobotPosition
+    #pragma pack(push, 1)
     struct GroundRobotPositionStruct { 
         float hero_x;   
         float hero_y;   
@@ -266,10 +287,12 @@ namespace RM_referee{
         float standard_4_y;   
         float standard_5_x;   
         float standard_5_y; };
-    static_assert(sizeof(GroundRobotPositionStruct) == 40, "GroundRobotPositionStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(GroundRobotPositionStruct) == 40, "GroundRobotPositionStruct must be 40 bytes long with packing");
     GENERATEPACK(GroundRobotPosition,GroundRobotPositionStruct)
 
     //0x020C RadarMarkDataPacket 6 RadarMarkData
+    #pragma pack(push, 1)
     struct RadarMarkDataStruct{ 
         uint8_t mark_hero_progress;   
         uint8_t mark_engineer_progress;   
@@ -277,13 +300,17 @@ namespace RM_referee{
         uint8_t mark_standard_4_progress; 
         uint8_t mark_standard_5_progress; 
         uint8_t mark_sentry_progress; };
-    static_assert(sizeof(RadarMarkDataStruct) == 6, "RadarMarkDataStruct must be 16 bytes long with packing");
+    #pragma pack(pop)
+    static_assert(sizeof(RadarMarkDataStruct) == 6, "RadarMarkDataStruct must be 6 bytes long with packing");
     GENERATEPACK(RadarMarkData,RadarMarkDataStruct)
 
     //0x020D SentryInfoPacket 4 SentryInfo
+    #pragma pack(push, 1)
     struct SentryInfoStruct { 
-        uint32_t sentry_info; };
-    static_assert(sizeof(SentryInfoStruct) == 4, "SentryInfoStruct must be 16 bytes long with packing");
+        uint32_t sentry_info; 
+        uint16_t sentry_info_2;};
+    #pragma pack(pop)
+    static_assert(sizeof(SentryInfoStruct) == 6, "SentryInfoStruct must be 6 bytes long with packing");
     GENERATEPACK(SentryInfo,SentryInfoStruct)
     //0x020E RadarInfoPacket 1 RadarInfo
 
@@ -291,12 +318,13 @@ namespace RM_referee{
 
 
     //0x0302 CustomRobotDataPacket 30 CustomRobotData
+    #pragma pack(push, 1)
     struct CustomRobotDataStruct { 
         uint8_t data[30]; };
+    #pragma pack(pop)
     static_assert(sizeof(CustomRobotDataStruct) == 30, "CustomRobotDataStruct must be 30 bytes long with packing");
     GENERATEPACK(CustomRobotData,CustomRobotDataStruct)
 
-    //BUG:这个数据裁判系统串口协议有问题，实际为uint16 cmd_source
     //0x0303 MinimapInteractionCommsMessagePacket 11 MinimapInteractionCommsMessage
     #pragma pack(push, 1)
     struct MinimapInteractionCommsMessageStruct { 
@@ -310,6 +338,7 @@ namespace RM_referee{
     GENERATEPACK(MinimapInteractionCommsMessage,MinimapInteractionCommsMessageStruct)
 
     //0x0304 KeyboardMouseMessagePacket 12 KeyboardMouseMessage
+    #pragma pack(push, 1)
     struct KeyboardMouseMessageStruct { 
         int16_t mouse_x; 
         int16_t mouse_y; 
@@ -318,20 +347,31 @@ namespace RM_referee{
         int8_t right_button_down; 
         uint16_t keyboard_value; 
         uint16_t reserved; };
+    #pragma pack(pop)
     static_assert(sizeof(KeyboardMouseMessageStruct) == 12, "KeyboardMouseMessageStruct must be 30 bytes long with packing");
     GENERATEPACK(KeyboardMouseMessage,KeyboardMouseMessageStruct)
 
     //0x0305 ClientMinimapRecvPacket 10 ClientMinimapRecv
     #pragma pack(push, 1)
-    struct ClientMinimapRecvStruct { 
-        uint16_t target_robot_id; 
-        float target_position_x; 
-        float target_position_y; };
+    struct ClientMinimapRecvStruct {   
+        uint16_t hero_position_x; 
+        uint16_t hero_position_y; 
+        uint16_t engineer_position_x; 
+        uint16_t engineer_position_y; 
+        uint16_t infantry_3_position_x; 
+        uint16_t infantry_3_position_y; 
+        uint16_t infantry_4_position_x; 
+        uint16_t infantry_4_position_y; 
+        uint16_t infantry_5_position_x; 
+        uint16_t infantry_5_position_y; 
+        uint16_t sentry_position_x; 
+        uint16_t sentry_position_y;  }; 
     #pragma pack(pop) 
-    static_assert(sizeof(ClientMinimapRecvStruct) == 10, "ClientMinimapRecvStruct must be 30 bytes long with packing");
+    static_assert(sizeof(ClientMinimapRecvStruct) == 24, "ClientMinimapRecvStruct must be 30 bytes long with packing");
     GENERATEPACK(ClientMinimapRecv,ClientMinimapRecvStruct)
 
     //0x0306 CustomClientDataPacket 8 CustomClientData
+    #pragma pack(push, 1)
     struct CustomClientDataStruct { 
         uint16_t key_value; 
         uint16_t x_position:12; 
@@ -339,6 +379,7 @@ namespace RM_referee{
         uint16_t y_position:12; 
         uint16_t mouse_right:4; 
         uint16_t reserved; }; 
+    #pragma pack(pop)
     static_assert(sizeof(CustomClientDataStruct) == 8, "CustomClientDataStruct must be 30 bytes long with packing");
     GENERATEPACK(CustomClientData,CustomClientDataStruct)
 
@@ -356,10 +397,12 @@ namespace RM_referee{
     GENERATEPACK(MapData,MapDataStruct)
 
     //0x0308 CustomInfoPacket 34 CustomInfo
+    #pragma pack(push, 1)
     struct CustomInfoStruct{   
         uint16_t sender_id; 
         uint16_t receiver_id; 
         uint8_t user_data[30]; }; 
+    #pragma pack(pop)
     static_assert(sizeof(CustomInfoStruct) == 34, "CustomInfoStruct must be 30 bytes long with packing");
     GENERATEPACK(CustomInfo,CustomInfoStruct) 
 
