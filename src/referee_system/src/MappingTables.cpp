@@ -86,20 +86,20 @@ namespace RM_referee{
             /**
             SERIALIZEPACKET(powerheatdatapacket);
             * * * * * * * * * * * * * * * * * * * 
-            if(powerheatdatapacket.GetID() == cmd_id) {
-                if(powerheatdatapacket.m_mutex.try_lock()) {
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value);
-                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength();
-                    data.resize(powerheatdatapacket.GetDataLength());
-                    data.insert(data.end(), dataStart, dataEnd);
-                    powerheatdatapacket.m_mutex.unlock();
-                    printf("Mapserialize success ! cmd_id id : 0x%x DataLength:%d\n",cmd_id,data.size());
-                    return data;
-                } else {
-                    data.resize(0);
-                    return data;
-                }
-            }
+            if(powerheatdatapacket.GetID() == cmd_id) { \
+                if(powerheatdatapacket.m_mutex.try_lock()) { \
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&powerheatdatapacket.m_value); \
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + powerheatdatapacket.GetDataLength(); \
+                    data.resize(powerheatdatapacket.GetDataLength()); \
+                    data.erase(data.begin(),data.end()); \
+                    data.insert(data.end(), dataStart, dataEnd); \
+                    powerheatdatapacket.m_mutex.unlock(); \
+                    return data; \
+                } else { \
+                    data.resize(0); \
+                    return data; \
+                } \
+            } \
             */
             SERIALIZEPACKET(gamestatuspacket);
             SERIALIZEPACKET(gameresulteventpacket);
@@ -362,7 +362,7 @@ namespace RM_referee{
 
     int TypeMethodsTables::read() {
         // std::ifstream file("../../../../samples.txt");
-        std::ifstream file("/home/suzuki/RefereeSystem/src/referee_system/samples2.txt");
+        std::ifstream file("/home/eatwhat/ws00_sentry/src/RefereeSystem/dump/serialPortdump_20240514211200.txt");
 
         if (file.is_open()) {
             std::string line;
@@ -381,11 +381,13 @@ namespace RM_referee{
 
         testheader = RM_referee::PacketHeader();
         it = testbuffer.begin();//重复执行
+        RCLCPP_INFO(rclcpp::get_logger("logger"),"read once ");
+
         return 0;
     };
 
     void TypeMethodsTables::testprocess() {
-            // std::cout<<testbuffer.size()<<"\n";
+            std::cout<<testbuffer.size()<<"\n";
             if(testbuffer.size() == 0) {
                 read();
                 return;
@@ -408,6 +410,7 @@ namespace RM_referee{
                 uint16_t cmd_id = static_cast<uint16_t>( ((*it)<<8) | (*(it+1)) );
                 //CRC16
                 if(crc16.Verify_CRC16_Check_Sum(&(*testbuffer.begin()),sizeof(RM_referee::PacketHeader) + 2 + testheader.DataLength + 2)) {
+                    RCLCPP_INFO(rclcpp::get_logger("logger"),"%#x",cmd_id);
                     uint16_t erased = MapSolve(cmd_id,&(*(it+2)),testheader.DataLength);
                     if(erased) it += 2+erased+2;
                 }

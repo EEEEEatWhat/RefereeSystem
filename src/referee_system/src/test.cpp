@@ -29,6 +29,7 @@ char ascii_art[] = R"(
 class RefereeSystem : public rclcpp::Node {
     public:
         RefereeSystem(): Node("RefereeSystem") {
+            RCLCPP_INFO(this->get_logger(), "RefereeSystem try to start.");
             service = this->create_service<my_msg_interface::srv::RefereeMsg>("RequestSerialize", std::bind(&RefereeSystem::ProcessSerialize,this,std::placeholders::_1,std::placeholders::_2));
             std::thread threadOne([&](){
                 while(1) {
@@ -47,7 +48,13 @@ class RefereeSystem : public rclcpp::Node {
         void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
             serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
             RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
-            if(serialize_memcount == 0) { //cmd_id不存在
+            if(request->cmd_id == 0xAFF) { //cmd_id不存在
+                response->cmd_id = 0xAFF;
+                response->data_length = 0;
+                response->data_stream.resize(0);
+                return;
+            }
+            if(serialize_memcount == 0 ) { //cmd_id不存在
                 RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
                 response->cmd_id = 0x0000;
                 response->data_length = 0;

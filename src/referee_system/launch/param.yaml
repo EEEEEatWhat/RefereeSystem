@@ -5,9 +5,9 @@
     - /dev/ttyUSB0
     - /dev/ttyUSB1
     - /dev/ttyUSB2
-    # - /dev/ttyACM0
-    # - /dev/ttyACM1
-    # - /dev/ttyACM2
+    - /dev/ttyACM0
+    - /dev/ttyACM1
+    - /dev/ttyACM2
     use_sim_time: false
     file_output: false
-    file_output_path: /home/eatwhat/Desktop/RefereeSystem/dump/
+    file_output_path: /home/eatwhat/ws00_sentry/src/RefereeSystem/dump/

@@ -9,6 +9,7 @@
 #include <boost/asio.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/convert.h>
@@ -16,22 +17,41 @@
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_ros/buffer.h>
+#include <tf2_ros/create_timer_ros.h>
 #include <fstream>
 #include <ostream>
 #include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/float64.hpp>
 #include <nav2_msgs/action/navigate_to_pose.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <thread>   
 #include <mutex>
+#include <future>
 
 #include "DataType.h"
 #include "MappingTables.h"
 #include "my_msg_interface/srv/referee_msg.hpp"
 #include "my_msg_interface/msg/power_heat.hpp"
 #include "my_msg_interface/msg/sentry_cmd.hpp"
+#include "my_msg_interface/msg/vision_cmd.hpp"
+#include "my_msg_interface/msg/aerial_cmd.hpp"
+#include "auto_aim_interfaces/msg/target.hpp"
 
 using std::hex;
+#define IGNORED  1
+#define DETECTED 0
 
+#pragma pack(push, 1) 
+struct BehaviorTopicMsg {
+    struct target_t {
+        float x;
+        float y;
+    }target;
+    uint8_t GameForceStart:4;
+    uint8_t tracking:4;
+};
+#pragma pack(pop)
+static_assert(sizeof(BehaviorTopicMsg) == 9);
 class RefereeSystem : public rclcpp::Node {
     public:
 
@@ -122,6 +142,9 @@ class RefereeSystem : public rclcpp::Node {
                 //以上全部与串口通信相关!
             }
 
+            // target_sub = std::make_shared<auto_aim_interfaces::msg::Target>("tracker/target",rclcpp::SensorDataQoS(),std::bind());
+            control_id_sub = this->create_subscription<std_msgs::msg::Float64>("control_id",rclcpp::SensorDataQoS(),std::bind(&RefereeSystem::ControlIDCallbcak,this, std::placeholders::_1));
+
             pBuffer = std::make_unique<tf2_ros::Buffer>(this->get_clock());
             pTfListener = std::make_shared<tf2_ros::TransformListener>(*pBuffer,this);
 
@@ -134,6 +157,22 @@ class RefereeSystem : public rclcpp::Node {
             power_heat_pub = this->create_publisher<my_msg_interface::msg::PowerHeat>("PowerHeat",rclcpp::SystemDefaultsQoS());
             RCLCPP_INFO(this->get_logger(), "PowerHeatPub has been started.");
 
+            vision_cmd_pub = this->create_publisher<my_msg_interface::msg::VisionCmd>("VisionCmd",rclcpp::SystemDefaultsQoS());
+            RCLCPP_INFO(this->get_logger(), "VisionCmdPub has been started.");
+
+            aerial_cmd_pub = this->create_publisher<my_msg_interface::msg::AerialCmd>("AerialCmd",rclcpp::SystemDefaultsQoS());
+            RCLCPP_INFO(this->get_logger(), "AerialCmdPub has been started.");
+            
+            std::memset(&last_struct_003,0,sizeof(last_struct_003));
+            std::memset(&last_struct_303,0,sizeof(last_struct_303));
+            ignore_cmd.set__base(IGNORED)
+                .set__guard(IGNORED)
+                .set__outpost(DETECTED)
+                .set__hero(DETECTED)
+                .set__miner(DETECTED)
+                .set__infantry_3(DETECTED)
+                .set__infantry_4(DETECTED)
+                .set__infantry_5(DETECTED);
             timer = this->create_wall_timer(std::chrono::milliseconds(20),std::bind(&RefereeSystem::Callback,this));
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been started.");
 
@@ -153,23 +192,37 @@ class RefereeSystem : public rclcpp::Node {
                 delete file;
             }
             RCLCPP_INFO(this->get_logger(), "RefereeSystem has been stopped.");
+            
         }
 
         private:    
             rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr plan_sub;
             rclcpp::Subscription<my_msg_interface::msg::SentryCmd>::SharedPtr sentry_cmd_sub ;
+            rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub ;
+            rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr control_id_sub ;
+            
             rclcpp::Service<my_msg_interface::srv::RefereeMsg>::SharedPtr service ;
             // rclcpp::Client<nav2_msgs::action::NavigateToPose>::SharedPtr client;
             rclcpp::Publisher<my_msg_interface::msg::PowerHeat>::SharedPtr power_heat_pub ;
+            rclcpp::Publisher<my_msg_interface::msg::VisionCmd>::SharedPtr vision_cmd_pub ;
+            rclcpp::Publisher<my_msg_interface::msg::AerialCmd>::SharedPtr aerial_cmd_pub ;
             std::unique_ptr<tf2_ros::Buffer> pBuffer;
             std::shared_ptr<tf2_ros::TransformListener> pTfListener;
             rclcpp::TimerBase::SharedPtr timer;
             uint16_t serialize_memcount = 0;
+            RM_referee::GameRobotHPStruct last_struct_003;
+            RM_referee::MinimapInteractionCommsMessageStruct last_struct_303;
+            BehaviorTopicMsg behaviortopicmsg;
+
+            my_msg_interface::msg::VisionCmd ignore_cmd;
 
             RM_referee::TypeMethodsTables Factory_;
             std::vector<std::string> serialport_arry;
             boost::asio::serial_port serialPort;
             std::mutex serial_write_mutex;
+            std::mutex ignore_mutex;
+            std::mutex behaviortopicmsg_mutex;
+
             std::thread spin_thread;
             std::thread read_thread;
             std::thread process_thread;
@@ -189,20 +242,32 @@ class RefereeSystem : public rclcpp::Node {
             } red_path_start_position, blue_path_start_position;
 
             void ProcessSerialize(const my_msg_interface::srv::RefereeMsg::Request::SharedPtr request,const my_msg_interface::srv::RefereeMsg::Response::SharedPtr response) {
-                serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
-                RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
-                if(serialize_memcount == 0) { //cmd_id不存在
-                    RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
-                    response->cmd_id = 0x0000;
-                    response->data_length = 0;
-                    response->data_stream.resize(0);
+                RCLCPP_INFO(this->get_logger(), "Got Request!");
+                if(request->cmd_id == 0xAFF ) {
+                    response->cmd_id = 0xAFF;
+                    response->data_length = sizeof(BehaviorTopicMsg);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataStart = reinterpret_cast<const boost::asio::detail::buffered_stream_storage::byte_type*>(&behaviortopicmsg);
+                    const boost::asio::detail::buffered_stream_storage::byte_type* dataEnd = dataStart + sizeof(BehaviorTopicMsg);
+                    response->data_stream.resize(sizeof(BehaviorTopicMsg));
+                    response->data_stream.erase(response->data_stream.begin(),response->data_stream.end()); 
+                    response->data_stream.insert(response->data_stream.end(), dataStart, dataEnd);
                     return;
+                } else {
+                    serialize_memcount = Factory_.MapSearchDataLength(request->cmd_id);
+                    RCLCPP_INFO(this->get_logger(), "request->cmd_id:0x%x",request->cmd_id);
+                    if(serialize_memcount == 0) { //cmd_id不存在
+                        RCLCPP_INFO(this->get_logger(), "cmd_id不存在");
+                        response->cmd_id = 0x0000;
+                        response->data_length = 0;
+                        response->data_stream.resize(0);
+                        return;
+                    }
+                    response->cmd_id = request->cmd_id;
+                    response->data_stream.resize(serialize_memcount);
+                    auto data = Factory_.Mapserialize(request->cmd_id);
+                    response->set__data_stream(data);
+                    response->data_length = serialize_memcount;
                 }
-                response->cmd_id = request->cmd_id;
-                response->data_stream.resize(serialize_memcount);
-                auto data = Factory_.Mapserialize(request->cmd_id);
-                response->set__data_stream(data);
-                response->data_length = serialize_memcount;
             }   
 
             void spin() {
@@ -245,19 +310,16 @@ class RefereeSystem : public rclcpp::Node {
                 transform.transform.translation.x = red_path_start_position.x;
                 transform.transform.translation.y = red_path_start_position.y;
                 transform.transform.rotation = tf2::toMsg(q);
-                transform.child_frame_id = "red_frame";
+                transform.child_frame_id = "aerial_map";
                 broadcaster.sendTransform(transform);
 
-                q.setRPY(0 , 0 , blue_path_start_position.theta);
-                transform.transform.translation.x = blue_path_start_position.x;
-                transform.transform.translation.y = blue_path_start_position.y;
-                transform.transform.rotation = tf2::toMsg(q);
-                transform.child_frame_id = "blue_frame";
-                broadcaster.sendTransform(transform);
             }
             void Callback() {
+                auto data_003 = Factory_.Mapserialize(0x003);
+                RM_referee::GameRobotHPStruct struct_003;
+                std::memcpy(&struct_003,data_003.data(),data_003.size());
+
                 auto data_202 = Factory_.Mapserialize(0x202);
-                
                 RM_referee::PowerHeatDataStruct struct_202;
                 std::memcpy(&struct_202,data_202.data(),data_202.size());
                 
@@ -283,6 +345,7 @@ class RefereeSystem : public rclcpp::Node {
                 send_data.shooter_17mm_2_barrel_heat = struct_202.shooter_17mm_2_barrel_heat;
                 power_heat_pub->publish(send_data);
 
+                //避免冗余，获取数据后，回调函数即可返回，开启新线程处理数据
                 if(!sentry_id_init_flag ) {
                     if(struct_201.robot_id == 7 || struct_201.robot_id ==107) {
                         if(this->get_parameter("sentry_id").as_int() ==  struct_201.robot_id ) {
@@ -297,6 +360,177 @@ class RefereeSystem : public rclcpp::Node {
                         RCLCPP_WARN(this->get_logger(),"sentry_id got aborted : %d ! current id is %d",struct_201.robot_id, this->get_parameter("sentry_id").as_int());
                     }
                 }
+
+                auto pFunc = [&](uint16_t id){
+                    std::this_thread::sleep_for(std::chrono::seconds(10));
+                    std::lock_guard<std::mutex> lock(ignore_mutex);
+                    switch (id) {
+                        case 1:
+                        case 101:
+                            ignore_cmd.hero = DETECTED;
+                            break;
+                        case 2:
+                        case 102:
+                            ignore_cmd.miner = DETECTED;
+                            break;
+                        case 3:
+                        case 103:
+                            ignore_cmd.infantry_3 = DETECTED;
+                            break;
+                        case 4:
+                        case 104:
+                            ignore_cmd.infantry_4 = DETECTED;
+                            break;
+                        case 5:
+                        case 105:
+                            ignore_cmd.infantry_5 = DETECTED;
+                            break;
+                        case 7:
+                        case 107:
+                            ignore_cmd.guard = DETECTED;
+                            break;
+                        default:
+                            break;
+                    }
+                    ignore_mutex.unlock();
+                };
+                //如果血量没有任何变化直接跳过
+                if(std::memcmp(&last_struct_003,&struct_003,32)){
+                    RCLCPP_INFO(this->get_logger(),"\n %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d \n %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d %d <- %d ",
+                                struct_003.blue_1_robot_HP,last_struct_003.blue_1_robot_HP,
+                                struct_003.blue_2_robot_HP,last_struct_003.blue_2_robot_HP,
+                                struct_003.blue_3_robot_HP,last_struct_003.blue_3_robot_HP,
+                                struct_003.blue_4_robot_HP,last_struct_003.blue_4_robot_HP,
+                                struct_003.blue_5_robot_HP,last_struct_003.blue_5_robot_HP,
+                                struct_003.blue_7_robot_HP,last_struct_003.blue_7_robot_HP,
+                                struct_003.blue_base_HP,last_struct_003.blue_base_HP,
+                                struct_003.blue_outpost_HP,last_struct_003.blue_outpost_HP,
+                                struct_003.red_1_robot_HP,last_struct_003.red_1_robot_HP,
+                                struct_003.red_2_robot_HP,last_struct_003.red_2_robot_HP,
+                                struct_003.red_3_robot_HP,last_struct_003.red_3_robot_HP,
+                                struct_003.red_4_robot_HP,last_struct_003.red_4_robot_HP,
+                                struct_003.red_5_robot_HP,last_struct_003.red_5_robot_HP,
+                                struct_003.red_7_robot_HP,last_struct_003.red_7_robot_HP,
+                                struct_003.red_base_HP,last_struct_003.red_base_HP,
+                                struct_003.red_outpost_HP,last_struct_003.red_outpost_HP
+                                );
+                    if(struct_201.robot_id == 107){
+                        //机器人血量从0变化到非0 即可认为复活，添加时间戳和机器人id到，处理队列中（使用异步，等待10秒后修改bool）
+                        if(last_struct_003.red_1_robot_HP==0 && struct_003.red_1_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.hero = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 1).detach();                        }
+                        if(last_struct_003.red_2_robot_HP==0 && struct_003.red_2_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.miner = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 2).detach();
+                        }
+                        if(last_struct_003.red_3_robot_HP==0 && struct_003.red_3_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_3 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 3).detach();
+                        }
+                        if(last_struct_003.red_4_robot_HP==0 && struct_003.red_4_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_4 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 4).detach();
+                        }
+                        if(last_struct_003.red_5_robot_HP==0 && struct_003.red_5_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_5 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 5).detach();
+                        }
+                        if(struct_003.red_outpost_HP != 0){
+                            ignore_cmd.guard = IGNORED;
+                        } else if(last_struct_003.red_7_robot_HP == 0 && struct_003.red_7_robot_HP != 0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.guard = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 7).detach();
+                        }
+                    }else if(struct_201.robot_id == 7) {
+                        if(last_struct_003.blue_1_robot_HP==0 && struct_003.blue_1_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.hero = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 101).detach();
+                        }
+                        if(last_struct_003.blue_2_robot_HP==0 && struct_003.blue_2_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.miner = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 102).detach();
+                        }
+                        if(last_struct_003.blue_3_robot_HP==0 && struct_003.blue_3_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_3 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 103).detach();
+                        }
+                        if(last_struct_003.blue_4_robot_HP==0 && struct_003.blue_4_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_4 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 104).detach();
+                        }
+                        if(last_struct_003.blue_5_robot_HP==0 && struct_003.blue_5_robot_HP!=0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.infantry_5 = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 105).detach();
+                        }
+                        if(struct_003.blue_outpost_HP != 0){
+                            ignore_cmd.guard = IGNORED;
+                        } else if(last_struct_003.blue_7_robot_HP == 0 && struct_003.blue_7_robot_HP != 0){
+                            std::lock_guard<std::mutex> lock(ignore_mutex);
+                            ignore_cmd.guard = IGNORED;
+                            ignore_mutex.unlock();
+                            std::thread(pFunc, 107).detach();
+                        }
+                    } 
+                }
+                ignore_cmd.outpost = IGNORED;
+                vision_cmd_pub->publish(ignore_cmd);
+                //update data
+                std::memcpy(&last_struct_003,&struct_003,sizeof(struct_003));
+
+                my_msg_interface::msg::AerialCmd aerial_cmd;
+                // if(std::memcmp(&last_struct_303,&struct_303,sizeof(RM_referee::MinimapInteractionCommsMessageStruct))){
+                    if( !pBuffer->canTransform("aerial_map", "map", tf2::TimePointZero, tf2::durationFromSec(0.1)) )
+                        return;
+                    std::string fromFrameRel = "aerial_map";
+                    std::string toFrameRel = "map"; 
+                    geometry_msgs::msg::PoseStamped target_pos;
+                    target_pos.header.set__frame_id("map").set__stamp(this->get_clock()->now());
+                    target_pos.pose.position.set__x(struct_303.target_position_x).set__y(struct_303.target_position_y).set__z(0);
+                    target_pos.pose.orientation.set__x(0).set__y(0).set__z(0).set__w(1);
+                    geometry_msgs::msg::PoseStamped temp;
+                    geometry_msgs::msg::TransformStamped t;
+                    try{
+                        t = pBuffer->lookupTransform(
+                            toFrameRel, fromFrameRel,
+                            tf2::TimePointZero);
+                        tf2::doTransform(target_pos, temp, t);
+                    } catch (const tf2::TransformException & ex) {
+                        RCLCPP_INFO(
+                            this->get_logger(), "Could not transform %s to %s: %s",
+                            toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+                        return;
+                    }
+                    aerial_cmd.set__updated(true)
+                                .set__target_pose(temp);
+                // } else {
+                    // aerial_cmd.set__updated(false)
+                    //             .set__target_pose(geometry_msgs::msg::PoseStamped());
+                // }
+                // aerial_cmd_pub->publish(aerial_cmd);
+                std::memcpy(&last_struct_303,&struct_303,sizeof(struct_303));
+                
                 if(struct_303.cmd_source != 0)
                     RCLCPP_INFO(this->get_logger(),"%d %#X %c %f %f ",
                                                     struct_303.target_robot_id,
@@ -314,7 +548,17 @@ class RefereeSystem : public rclcpp::Node {
                     can_cancel_flag = 1;
                 }
             }
-
+            void TargetCallback(const auto_aim_interfaces::msg::Target::SharedPtr msg) {
+                std::lock_guard<std::mutex> behaviortopicmsg_lock(behaviortopicmsg_mutex); 
+            }
+            void ControlIDCallbcak(const std_msgs::msg::Float64::SharedPtr msg) {
+                std::lock_guard<std::mutex> behaviortopicmsg_lock(behaviortopicmsg_mutex); 
+                if(msg->data == 1) {
+                    behaviortopicmsg.GameForceStart = 1;
+                }else {
+                    behaviortopicmsg.GameForceStart = 0;
+                }
+            }
             /**
              * @brief   该数据包用于发送己方机器人的路径规划信息
              *          该数据依赖下列信息
@@ -326,8 +570,7 @@ class RefereeSystem : public rclcpp::Node {
              *                  3.添加额外坐标系，给定裁判系统地图坐标系通过tf变换获取 recommend
             */
             void PlanSubCallback(const nav_msgs::msg::Path::SharedPtr msg) {
-                if( !pBuffer->canTransform("map", "red_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ||
-                !pBuffer->canTransform("map", "blue_frame", tf2::TimePointZero, tf2::durationFromSec(0.1)) ) 
+                if( !pBuffer->canTransform("map", "aerial_map", tf2::TimePointZero, tf2::durationFromSec(0.1)) )
                     return;
                 #pragma pack(push, 1) 
                 struct map_data_t {
@@ -351,7 +594,7 @@ class RefereeSystem : public rclcpp::Node {
                     },
                     .cmd_id = 0x0307,
                     .path = {
-                        .intention = 0x03, //0x01:到目标点攻击 0x02:到目标点防御 0x03:到目标点
+                        .intention = 0x01, //0x01:到目标点攻击 0x02:到目标点防御 0x03:到目标点
                         .start_position_x = 0,
                         .start_position_y = 0,
                         .delta_x = {0},
@@ -365,36 +608,84 @@ class RefereeSystem : public rclcpp::Node {
                 static_assert(sizeof(map_data_t) == 114, "map_data_t size error");
                 RCLCPP_INFO(this->get_logger(),"%zu",msg->poses.size());
                 // std::vector<geometry_msgs::msg::PoseStamped> original = msg->poses; // 是否需要先拷贝，避免段错误？
-                std::vector<geometry_msgs::msg::Pose> path_poses_in_red_frame;
-                std::vector<geometry_msgs::msg::Pose> path_poses_in_blue_frame;
+                geometry_msgs::msg::PoseStamped temp;
+                std::vector<geometry_msgs::msg::Pose> path_poses_in_aerial_map;
+                std::string fromFrameRel = "map";
+                std::string toFrameRel = "aerial_map"; 
+                RCLCPP_INFO(rclcpp::get_logger("FRAME"),"%s",toFrameRel.c_str());
+                geometry_msgs::msg::TransformStamped t;
                 if (msg->poses.size() > 49) {//降采样到49个点
                     float step = float(msg->poses.size()) / 49;
-                    int count ;
-                    for (float i = 0 ; i < msg->poses.size(); i += step) {
-                        pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
+                    path_poses_in_aerial_map.erase(path_poses_in_aerial_map.begin(),path_poses_in_aerial_map.end());
+                    path_poses_in_aerial_map.resize(0);
+                    for (float i = 0 ; i < msg->poses.size()-1; i += step) {
+                        // pBuffer->transform(msg->poses[int(i)].pose, temp, "aerial_map");
+                        //     path_poses_in_aerial_map.push_back(temp.pose);
+                        // RCLCPP_INFO(rclcpp::get_logger("ORIGIN"),"origin:(%lf,%lf)",msg->poses[int(i)].pose.position.x,msg->poses[int(i)].pose.position.y);
+                        try{
+                            t = pBuffer->lookupTransform(
+                                toFrameRel, fromFrameRel,
+                                tf2::TimePointZero);
+                            tf2::doTransform(msg->poses[int(i)], temp, t);
+                            path_poses_in_aerial_map.push_back(temp.pose);
+                            // RCLCPP_INFO(rclcpp::get_logger("TEST1"),"temp.poses:(%lf,%lf)size:%zu",temp.pose.position.x,temp.pose.position.y,path_poses_in_aerial_map.size());
+                        } catch (const tf2::TransformException & ex) {
+                            RCLCPP_INFO(
+                                this->get_logger(), "Could not transform %s to %s: %s",
+                                toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+                            return;
+                        }
                     }
                 } else {
+                    // pBuffer->transform(msg->poses[int(i)].pose, temp, "aerial_map");
+                    // path_poses_in_aerial_map.push_back(temp);
+                    path_poses_in_aerial_map.erase(path_poses_in_aerial_map.begin(),path_poses_in_aerial_map.end());
+                    path_poses_in_aerial_map.resize(0);
                     for (float i = 0 ; i < msg->poses.size(); i ++) {
-                        int count ;
-                        pBuffer->transform(msg->poses[int(i)].pose, path_poses_in_red_frame.at(count++), "red_frame", tf2::durationFromSec(0.1));
+                        try{
+                            t = pBuffer->lookupTransform(
+                                toFrameRel, fromFrameRel,
+                                tf2::TimePointZero);
+                            tf2::doTransform(msg->poses[int(i)], temp, t);
+                            path_poses_in_aerial_map.push_back(temp.pose);
+                            // RCLCPP_INFO(rclcpp::get_logger("TEST1"),"temp.poses:(%lf,%lf)size:%zu",temp.pose.position.x,temp.pose.position.y,path_poses_in_aerial_map.size());
+                        } catch (const tf2::TransformException & ex) {
+                            RCLCPP_INFO(
+                                this->get_logger(), "Could not transform %s to %s: %s",
+                                toFrameRel.c_str(), fromFrameRel.c_str(), ex.what());
+                            return;
+                        }
                     }
                 }
-                // if(!path_poses_in_red_frame.empty()) {
-                //     map_data.path.start_position_x = path_poses_in_red_frame.front().position.x;
-                //     map_data.path.start_position_y = path_poses_in_red_frame.front().position.y;
-                // }
-                // for(int i =1 ;i<path_poses_in_red_frame.size();i++) {
-                //     map_data.path.delta_x[i-1] = path_poses_in_red_frame[i].position.x - path_poses_in_red_frame[i-1].position.x;
-                //     map_data.path.delta_y[i-1] = path_poses_in_red_frame[i].position.y - path_poses_in_red_frame[i-1].position.y;
-                // }
-                    map_data.path.start_position_x = 5.5;
-                    map_data.path.start_position_y = 7.5;
-                    map_data.path.delta_x[0] = 5;
-                    map_data.path.delta_y[0] = 5;
-                map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-2);
+                RCLCPP_INFO(rclcpp::get_logger("TEST"), "start:(%lf, %lf)",path_poses_in_aerial_map.front().position.x,path_poses_in_aerial_map.front().position.y);
+                if(!path_poses_in_aerial_map.empty()) {
+                    map_data.path.start_position_x = path_poses_in_aerial_map.begin()->position.x * 10;
+                    map_data.path.start_position_y = path_poses_in_aerial_map.begin()->position.y * 10;
+                }
+                int accumulated_x = path_poses_in_aerial_map.begin()->position.x * 10;//dm
+                int accumulated_y = path_poses_in_aerial_map.begin()->position.y * 10;//dm
+                for(size_t i =1 ;i<path_poses_in_aerial_map.size();i++) {
+                    map_data.path.delta_x[i-1] = path_poses_in_aerial_map[i].position.x * 10 - accumulated_x;
+                    accumulated_x += map_data.path.delta_x[i-1];
+                    map_data.path.delta_y[i-1] = path_poses_in_aerial_map[i].position.y * 10 - accumulated_y;
+                    accumulated_y += map_data.path.delta_y[i-1];
+                }
+                    // map_data.path.start_position_x = 55;
+                    // map_data.path.start_position_y = 75;
+                    // map_data.path.delta_x[0] = 0;
+                    // map_data.path.delta_y[0] = 20;
+                // for(int i = 0 ; i < 49 ; i++) {
+                //     RCLCPP_INFO(this->get_logger(),"delta %d %d ",map_data.path.delta_x[i],map_data.path.delta_y[i]);
+                // };
+                map_data.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&map_data.header,sizeof(RM_referee::PacketHeader)-1);
                 map_data.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&map_data,sizeof(map_data_t)-2);
                 
-
+                if( Factory_.crc8.Verify_CRC8_Check_Sum((uint8_t*)&map_data,sizeof(RM_referee::PacketHeader))
+                    && Factory_.crc16.Verify_CRC16_Check_Sum((uint8_t*)&map_data,114)){
+                    RCLCPP_INFO(this->get_logger(),"Right！");
+                } else{
+                    RCLCPP_INFO(this->get_logger(),"False！");
+                }
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
                 serialPort.async_write_some(boost::asio::buffer(&map_data, sizeof(map_data_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
                     if (!error) {
@@ -429,6 +720,7 @@ class RefereeSystem : public rclcpp::Node {
                     .header = {
                         .SOF = 0xA5,
                         .DataLength = 10,
+                        // .SequenceNumber = 0x02,
                         .SequenceNumber = static_cast<uint8_t>(DecisionPacketHeaderSequenceNumber++),
                         .CRC8 = 0x00,
                     },
@@ -450,29 +742,30 @@ class RefereeSystem : public rclcpp::Node {
                 };
                 #pragma pack(pop)
                 static_assert(sizeof(decision_serial_write_t) == 19, "decision_serial_write_t size error");
-                decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-2);
+                decision_serial_write.header.CRC8 = Factory_.crc8.Get_CRC8_Check_Sum((uint8_t*)&decision_serial_write.header,sizeof(RM_referee::PacketHeader)-1);
                 decision_serial_write.frame_tail = Factory_.crc16.Get_CRC16_Check_Sum((uint8_t*)&decision_serial_write,sizeof(decision_serial_write_t)-2);
-                if(Factory_.crc16.Verify_CRC16_Check_Sum((uint8_t*)&decision_serial_write,19)){
-                    RCLCPP_INFO(this->get_logger(),"Right！");
+                if( Factory_.crc8.Verify_CRC8_Check_Sum((uint8_t*)&decision_serial_write,sizeof(RM_referee::PacketHeader))
+                    && Factory_.crc16.Verify_CRC16_Check_Sum((uint8_t*)&decision_serial_write,19)){
+                    // RCLCPP_INFO(this->get_logger(),"Right！");
                 } else{
-                    RCLCPP_INFO(this->get_logger(),"False！");
+                    // RCLCPP_INFO(this->get_logger(),"False！");
                 }
                 std::lock_guard<std::mutex> lock(serial_write_mutex);
-                RCLCPP_INFO(this->get_logger(),"sentry_cmd %d %d %d %d ",msg->confirm_res,
+                RCLCPP_INFO(this->get_logger(),"sentry_cmd %d %d %d %d %d",msg->confirm_res,
                                                                         msg->confirm_insta_res,
                                                                         msg->pending_missile_exch,
                                                                         msg->remote_missile_req_count,
                                                                         msg->remote_health_req_count
                                                                         );
-                serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
-                    if (!error) {
-                        RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
-                        //输出一些重要信息
-                    } else {
-                        RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
-                    }
-                });
-                // serialPort.write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)));
+                // serialPort.async_write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)), [](const boost::system::error_code& error, std::size_t bytes_transferred) {
+                //     if (!error) {
+                //         RCLCPP_INFO(rclcpp::get_logger("sentry_cmd"), "Wrote %zu bytes", bytes_transferred);
+                //         //输出一些重要信息
+                //     } else {
+                //         RCLCPP_ERROR(rclcpp::get_logger("sentry_cmd"), "Write failed: %s", error.message().c_str());
+                //     }
+                // });
+                serialPort.write_some(boost::asio::buffer(&decision_serial_write, sizeof(decision_serial_write_t)));
             }
 
 // ros2 topic info /plan

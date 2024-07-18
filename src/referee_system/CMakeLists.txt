@@ -17,7 +17,9 @@ find_package(my_msg_interface REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(auto_aim_interfaces REQUIRED)
 
 add_executable(run_referee_system 
   # src/test.cpp 
@@ -36,7 +38,9 @@ ament_target_dependencies(
   nav2_msgs
   nav_msgs
   tf2
+  tf2_ros
   tf2_geometry_msgs
+  auto_aim_interfaces
   )
 target_include_directories(run_referee_system
   PRIVATE
