@@ -60,86 +60,103 @@ class RefereeSystem : public rclcpp::Node {
         ,serialPort(ioService)
         {
             GetParam();
-
-            char cwd[1024];
-            if (getcwd(cwd, sizeof(cwd)) != NULL) {
-                RCLCPP_INFO(this->get_logger(), "Current working dir: %s", cwd);
-            } else {
-                RCLCPP_ERROR(this->get_logger(), "Failed to get current working directory");
-            }
-            if(en_file_output){
-                // 创建一个带有时间戳的文件名
-                auto now = std::chrono::system_clock::now();
-                std::time_t now_c = std::chrono::system_clock::to_time_t(now);
-                std::tm* now_tm = std::localtime(&now_c);
-                char time_str[100];
-                std::strftime(time_str, sizeof(time_str), "%Y%m%d%H%M%S", now_tm);
-                std::ostringstream filename;
-                filename << file_path << "serialPortdump_" << time_str << ".txt";
-
-                file = new std::ofstream(filename.str(), std::ios::binary);
-                if (!*file) {
-                    RCLCPP_ERROR(this->get_logger(), "Failed to open the output file.");
-                    return;
-                } else {
-                    RCLCPP_INFO(this->get_logger(), "Output file opened: %s", filename.str().c_str());
-                }
-            }
-
-            //打开串口列表中的串口
             bool success = false;
-            for (const auto& port : serialport_arry) {
-                try {
-                    RCLCPP_WARN(this->get_logger(), "Opened serial port %s", port.c_str());
-                    serialPort.open(port);
-                    serialPort.set_option(boost::asio::serial_port::baud_rate(115200));
-                    serialPort.set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
-                    serialPort.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
-                    serialPort.set_option(boost::asio::serial_port::character_size(8));
 
-                    success = true;
-                    break;
-                } catch (boost::system::system_error& e) {
-                    RCLCPP_ERROR(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
-                }
-            }
-            //开辟线程和分配任务
-            if (!success) {
-                // throw std::runtime_error("Failed to open any serial port");
-                RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
-            } else {
-                io_run = std::thread([&ioService](){
-                            while (true) {
-                                ioService.run();
-                            }
-                        });
-                //WTF？ Is this CPP ? ? ? 
-                //(线程类接受类的重载成员函数)-suzukisuncy
-                if(en_file_output) {
-                    read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::SerialRead),
-                                        &Factory_, 
-                                        std::ref(serialPort) ,
-                                        file
-                                    );
+            //不使能回放功能时，判断是否有文件输出，和打开串口功能
+            if(!en_en_replay) {
+                char cwd[1024];
+                if (getcwd(cwd, sizeof(cwd)) != NULL) {
+                    RCLCPP_INFO(this->get_logger(), "Current working dir: %s", cwd);
                 } else {
-                    read_thread = std::thread(
-                                        static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::SerialRead),
-                                        &Factory_, 
-                                        std::ref(serialPort) 
-                                    );
+                    RCLCPP_ERROR(this->get_logger(), "Failed to get current working directory");
                 }
+                if(en_file_output){
+                    // 创建一个带有时间戳的文件名
+                    auto now = std::chrono::system_clock::now();
+                    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+                    std::tm* now_tm = std::localtime(&now_c);
+                    char time_str[100];
+                    std::strftime(time_str, sizeof(time_str), "%Y%m%d%H%M%S", now_tm);
+                    std::ostringstream filename;
+                    filename << file_path << "serialPortdump_" << time_str << ".txt";
+
+                    file = new std::ofstream(filename.str(), std::ios::binary);
+                    if (!*file) {
+                        RCLCPP_ERROR(this->get_logger(), "Failed to open the output file.");
+                        return;
+                    } else {
+                        RCLCPP_INFO(this->get_logger(), "Output file opened: %s", filename.str().c_str());
+                    }
+                }
+
+                //打开串口列表中的串口
+                for (const auto& port : serialport_arry) {
+                    try {
+                        RCLCPP_WARN(this->get_logger(), "Opened serial port %s", port.c_str());
+                        serialPort.open(port);
+                        serialPort.set_option(boost::asio::serial_port::baud_rate(115200));
+                        serialPort.set_option(boost::asio::serial_port::parity(boost::asio::serial_port::parity::none));
+                        serialPort.set_option(boost::asio::serial_port::stop_bits(boost::asio::serial_port::stop_bits::one));
+                        serialPort.set_option(boost::asio::serial_port::character_size(8));
+
+                        success = true;
+                        break;
+                    } catch (boost::system::system_error& e) {
+                        RCLCPP_ERROR(this->get_logger(), "Failed to open serial port %s: %s", port.c_str(), e.what());                    
+                    }
+                }
+
+                if (!success) {
+                    // throw std::runtime_error("Failed to open any serial port");
+                    RCLCPP_ERROR(this->get_logger(), "Failed to open any serial port");
+                } else{
+                    io_run = std::thread([&ioService](){
+                                while (true) {
+                                    ioService.run();
+                                }
+                            });
+                    //WTF？ Is this CPP ? ? ? 
+                    //(线程类接受类的重载成员函数)-suzukisuncy
+                    if(en_file_output) {
+                        read_thread = std::thread(
+                                            static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& ,std::ofstream* )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                            &Factory_, 
+                                            std::ref(serialPort) ,
+                                            file
+                                        );
+                    } else {
+                        read_thread = std::thread(
+                                            static_cast<void(RM_referee::TypeMethodsTables::*)(boost::asio::serial_port& )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                            &Factory_, 
+                                            std::ref(serialPort) 
+                                        );
+                    }
+                    RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
+
+                    //数据处理线程只与数据相关
+                    process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
+                    RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
+                    
+                    //以下全部与串口发送相关!
+                    sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
+                    RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
+
+                    plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
+                    RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
+
+                }
+            } else {
+                //回放功能
+                read_thread = std::thread(
+                                    static_cast<void(RM_referee::TypeMethodsTables::*)(std::string )>(&RM_referee::TypeMethodsTables::SerialRead),
+                                    &Factory_, 
+                                    replay_file_path
+                                );
                 RCLCPP_INFO(this->get_logger(), "read_thread has been started.");
-                
+
+                //数据处理线程只与数据相关
                 process_thread = std::thread(&RM_referee::TypeMethodsTables::ProcessData, &Factory_);
                 RCLCPP_INFO(this->get_logger(), "process_thread has been started.");
-
-                sentry_cmd_sub  = this->create_subscription<my_msg_interface::msg::SentryCmd>("sentry_cmd", 1 ,std::bind(&RefereeSystem::DecisionSerialWriteCallback, this , std::placeholders::_1));
-                RCLCPP_INFO(this->get_logger(), "SentryCmdService has been started.");
-
-                plan_sub = this->create_subscription<nav_msgs::msg::Path>("/plan", 1, std::bind(&RefereeSystem::PlanSubCallback, this, std::placeholders::_1));
-                RCLCPP_INFO(this->get_logger(), "PlanSub has been started.");
-                //以上全部与串口通信相关!
             }
 
             // target_sub = std::make_shared<auto_aim_interfaces::msg::Target>("tracker/target",rclcpp::SensorDataQoS(),std::bind());
@@ -230,7 +247,9 @@ class RefereeSystem : public rclcpp::Node {
 
             std::ofstream* file;    
             bool en_file_output = false;
+            bool en_en_replay = false;
             std::string file_path = "log/";
+            std::string replay_file_path = "log/";
 
             bool sentry_id_init_flag = false;
             int DecisionPacketHeaderSequenceNumber = 0;
@@ -289,7 +308,9 @@ class RefereeSystem : public rclcpp::Node {
 
                 file_path = this->get_parameter("file_output_path").as_string();
                 en_file_output = this->get_parameter("file_output").as_bool();
-
+                en_en_replay = this->get_parameter("en_replay").as_bool();
+                replay_file_path = this->get_parameter("replay_file_path").as_string();
+                
                 serialport_arry = this->get_parameter("serialport_arry").as_string_array();
                 for (const auto& port : serialport_arry) {
                     RCLCPP_INFO(rclcpp::get_logger("TEST"), "Serialport: %s", port.c_str());

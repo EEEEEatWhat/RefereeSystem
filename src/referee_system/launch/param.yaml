@@ -11,3 +11,5 @@
     use_sim_time: false
     file_output: false
     file_output_path: /home/eatwhat/ws00_sentry/src/RefereeSystem/dump/
+    en_replay: false #启用后不再读取串口数据，而是从文件中读取
+    replay_file_path: /home/eatwhat/ws00_sentry/src/RefereeSystem/dump/2021-07-06-15-00-00.txt

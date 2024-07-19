@@ -105,6 +105,13 @@ namespace RM_referee {
         void SerialRead(boost::asio::serial_port& serialPort ,std::ofstream* file) ;          
 
         /**
+         * @brief  同步线程的方式从文件读取数据
+         * @param  replay_file_path 读取的文件地址
+         * @return void
+         * @warning 该函数需要单独线程调用
+        */
+        void SerialRead(std::string replay_file_path) ;    
+        /**
          * @brief  以异步线程的方式从串口读取数据
          * @param  serial_port 端口号
          * @return void
